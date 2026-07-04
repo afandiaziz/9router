@@ -36,25 +36,29 @@ function UsageContent() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
-      {/* Tabs + period selector on same row */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <SegmentedControl
-          options={[
-            { value: "overview", label: "Overview" },
-            { value: "details", label: "Details" },
-          ]}
-          value={activeTab}
-          onChange={handleTabChange}
-          className="w-full sm:w-auto"
-        />
-        {activeTab === "overview" && (
+      {/* Tabs on their own row so long period selectors cannot cover tab clicks */}
+      <div className="flex flex-col gap-3">
+        <div className="relative z-20 w-fit max-w-full shrink-0">
           <SegmentedControl
-            options={PERIODS}
-            value={period}
-            onChange={setPeriod}
-            size="sm"
-            className="w-full overflow-x-auto sm:w-auto"
+            options={[
+              { value: "overview", label: "Overview" },
+              { value: "details", label: "Details" },
+            ]}
+            value={activeTab}
+            onChange={handleTabChange}
+            className="w-full sm:w-auto"
           />
+        </div>
+        {activeTab === "overview" && (
+          <div className="min-w-0 max-w-full overflow-x-auto">
+            <SegmentedControl
+              options={PERIODS}
+              value={period}
+              onChange={setPeriod}
+              size="sm"
+              className="max-w-full"
+            />
+          </div>
         )}
       </div>
 
