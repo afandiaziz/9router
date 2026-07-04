@@ -36,8 +36,8 @@ function UsageContent() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
-      {/* Keep tabs and periods on one line without letting periods cover tab clicks */}
-      <div className="flex min-w-0 items-center gap-2">
+      {/* Keep tabs left and periods right on one line without overlap */}
+      <div className="flex min-w-0 items-center justify-between gap-2">
         <div className="relative z-20 shrink-0">
           <SegmentedControl
             options={[
@@ -50,14 +50,16 @@ function UsageContent() {
           />
         </div>
         {activeTab === "overview" && (
-          <div className="min-w-0 flex-1 overflow-x-auto">
-            <SegmentedControl
-              options={PERIODS}
-              value={period}
-              onChange={setPeriod}
-              size="sm"
-              className="min-w-max"
-            />
+          <div className="flex min-w-0 flex-1 justify-end overflow-hidden">
+            <div className="overflow-x-auto">
+              <SegmentedControl
+                options={PERIODS}
+                value={period}
+                onChange={setPeriod}
+                size="sm"
+                className="min-w-max"
+              />
+            </div>
           </div>
         )}
       </div>
