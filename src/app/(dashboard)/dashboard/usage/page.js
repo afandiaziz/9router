@@ -3,15 +3,10 @@
 import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { UsageStats, RequestLogger, CardSkeleton, SegmentedControl } from "@/shared/components";
+import { USAGE_PERIOD_OPTIONS } from "@/lib/usagePeriods.js";
 import RequestDetailsTab from "./components/RequestDetailsTab";
 
-const PERIODS = [
-  { value: "today", label: "Today" },
-  { value: "24h", label: "24h" },
-  { value: "7d", label: "7D" },
-  { value: "30d", label: "30D" },
-  { value: "60d", label: "60D" },
-];
+const PERIODS = USAGE_PERIOD_OPTIONS;
 
 export default function UsagePage() {
   return (
@@ -58,7 +53,7 @@ function UsageContent() {
             value={period}
             onChange={setPeriod}
             size="sm"
-            className="w-full sm:w-auto"
+            className="w-full overflow-x-auto sm:w-auto"
           />
         )}
       </div>
