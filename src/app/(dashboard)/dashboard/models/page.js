@@ -1,0 +1,470 @@
+"use client";
+
+import { useState, useEffect, useMemo, useCallback } from "react";
+import PropTypes from "prop-types";
+import { Card, Button, CardSkeleton, ConfirmModal, CapacityBadges } from "@/shared/components";
+import ProviderIcon from "@/shared/components/ProviderIcon";
+import { PROVIDER_MODELS, getModelKind } from "@/shared/constants/models";
+import { getProviderAlias, getProviderByAlias } from "@/shared/constants/providers";
+import { getCapabilitiesForModel } from "open-sse/providers/capabilities.js";
+import { useModelCaps } from "@/shared/hooks/useModelCaps";
+import { resolveModelsDevProviderId } from "@/lib/modelsDev/providerMap.js";
+import { formatModelMeta } from "@/shared/utils/modelMeta";
+import EditModelModal from "./EditModelModal";
+
+const inputClass =
+  "w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary";
+
+export default function ModelsPage() {
+  const [loading, setLoading] = useState(true);
+  const [customModels, setCustomModels] = useState([]);
+  const [disabledMap, setDisabledMap] = useState({});
+  const [aliasByModel, setAliasByModel] = useState({});
+  const [pricing, setPricing] = useState({});
+  const [capsOverrides, setCapsOverrides] = useState({});
+  const [modelsDev, setModelsDev] = useState(null);
+  const [search, setSearch] = useState("");
+  const [providerFilter, setProviderFilter] = useState("");
+  const [editing, setEditing] = useState(null);
+  const [confirmState, setConfirmState] = useState(null);
+  const [mdAction, setMdAction] = useState({});
+  const [refreshing, setRefreshing] = useState(false);
+  const { getCaps } = useModelCaps();
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [customRes, disabledRes, aliasRes, pricingRes, capsRes, mdRes] = await Promise.all([
+        fetch("/api/models/custom"),
+        fetch("/api/models/disabled"),
+        fetch("/api/models/alias"),
+        fetch("/api/pricing"),
+        fetch("/api/models/caps"),
+        fetch("/api/models-dev"),
+      ]);
+      if (customRes.ok) {
+        const data = await customRes.json();
+        setCustomModels(data.models || []);
+      }
+      if (disabledRes.ok) {
+        const data = await disabledRes.json();
+        setDisabledMap(data.disabled || {});
+      }
+      if (aliasRes.ok) {
+        const data = await aliasRes.json();
+        const reversed = {};
+        for (const [alias, model] of Object.entries(data.aliases || {})) reversed[model] = alias;
+        setAliasByModel(reversed);
+      }
+      if (pricingRes.ok) setPricing(await pricingRes.json());
+      if (capsRes.ok) {
+        const data = await capsRes.json();
+        setCapsOverrides(data.overrides || {});
+      }
+      if (mdRes.ok) setModelsDev(await mdRes.json());
+    } catch (error) {
+      console.log("Error fetching models data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // All LLM models grouped by provider alias (built-in + custom)
+  const groups = useMemo(() => {
+    const map = new Map();
+    const ensure = (alias) => {
+      if (!map.has(alias)) {
+        const provider = getProviderByAlias(alias);
+        map.set(alias, {
+          key: alias,
+          providerId: provider?.id || null,
+          name: provider?.name || alias,
+          models: [],
+        });
+      }
+      return map.get(alias);
+    };
+
+    for (const [providerId, models] of Object.entries(PROVIDER_MODELS)) {
+      const alias = getProviderAlias(providerId);
+      const group = ensure(alias);
+      for (const m of models) {
+        if (getModelKind(m, "llm") !== "llm") continue;
+        group.models.push({
+          key: `${alias}|${m.id}`,
+          providerId,
+          providerAlias: alias,
+          id: m.id,
+          name: m.name || m.id,
+          isCustom: false,
+        });
+      }
+    }
+
+    for (const c of customModels) {
+      if (c.type && c.type !== "llm") continue;
+      const group = ensure(c.providerAlias);
+      group.models.push({
+        key: `${c.providerAlias}|${c.id}|custom`,
+        providerId: group.providerId,
+        providerAlias: c.providerAlias,
+        id: c.id,
+        name: c.name || c.id,
+        isCustom: true,
+      });
+    }
+
+    for (const group of map.values()) group.models.sort((a, b) => a.id.localeCompare(b.id));
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [customModels]);
+
+  const catalogIds = useMemo(
+    () => new Set((modelsDev?.providers || []).map((p) => p.id)),
+    [modelsDev]
+  );
+
+  const getAliasFor = useCallback(
+    (row) => aliasByModel[`${row.providerId}/${row.id}`] || aliasByModel[`${row.providerAlias}/${row.id}`] || "",
+    [aliasByModel]
+  );
+
+  const isDisabled = useCallback(
+    (row) =>
+      (disabledMap[row.providerAlias] || []).includes(row.id) ||
+      (row.providerId && (disabledMap[row.providerId] || []).includes(row.id)),
+    [disabledMap]
+  );
+
+  const getPricingFor = useCallback(
+    (row) =>
+      pricing[row.providerAlias]?.[row.id] ||
+      (row.providerId ? pricing[row.providerId]?.[row.id] : null) ||
+      null,
+    [pricing]
+  );
+
+  const visibleGroups = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return groups
+      .map((group) => {
+        if (providerFilter && group.key !== providerFilter) return null;
+        const models = q
+          ? group.models.filter(
+              (m) =>
+                m.id.toLowerCase().includes(q) ||
+                m.name.toLowerCase().includes(q) ||
+                getAliasFor(m).toLowerCase().includes(q)
+            )
+          : group.models;
+        return models.length > 0 ? { ...group, models } : null;
+      })
+      .filter(Boolean);
+  }, [groups, search, providerFilter, getAliasFor]);
+
+  const openEdit = (row) => {
+    const staticCaps = getCapabilitiesForModel(row.isCustom ? row.providerAlias : row.providerId, row.id) || {};
+    const effectiveCaps = getCaps(`${row.providerAlias}/${row.id}`) || {};
+    const aliasKey = row.isCustom ? `${row.providerAlias}/${row.id}` : `${row.providerId}/${row.id}`;
+    const override =
+      capsOverrides[`${row.providerAlias}|${row.id}`] ||
+      (row.providerId ? capsOverrides[`${row.providerId}|${row.id}`] : null) ||
+      null;
+    setEditing({
+      ...row,
+      aliasKey,
+      alias: getAliasFor(row),
+      staticCaps,
+      caps: { ...staticCaps, ...effectiveCaps },
+      override,
+      pricing: getPricingFor(row),
+    });
+  };
+
+  const handleToggleDisabled = async (row, disabled) => {
+    try {
+      if (disabled) {
+        await fetch(
+          `/api/models/disabled?providerAlias=${encodeURIComponent(row.providerAlias)}&id=${encodeURIComponent(row.id)}`,
+          { method: "DELETE" }
+        );
+      } else {
+        await fetch("/api/models/disabled", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ providerAlias: row.providerAlias, ids: [row.id] }),
+        });
+      }
+      await fetchData();
+    } catch (error) {
+      console.log("Error toggling model:", error);
+    }
+  };
+
+  const handleDeleteCustom = (row) => {
+    setConfirmState({
+      title: "Delete Custom Model",
+      message: `Delete ${row.providerAlias}/${row.id}?`,
+      onConfirm: async () => {
+        setConfirmState(null);
+        try {
+          await fetch(
+            `/api/models/custom?providerAlias=${encodeURIComponent(row.providerAlias)}&id=${encodeURIComponent(row.id)}&type=llm`,
+            { method: "DELETE" }
+          );
+          globalThis.dispatchEvent(new Event("customModelChanged"));
+          await fetchData();
+        } catch (error) {
+          console.log("Error deleting model:", error);
+        }
+      },
+    });
+  };
+
+  const handleModelsDevImport = async (group) => {
+    setMdAction((prev) => ({ ...prev, [group.key]: { loading: true } }));
+    try {
+      const res = await fetch("/api/models-dev/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: group.providerId || group.key }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMdAction((prev) => ({ ...prev, [group.key]: { error: data.error || "Import failed" } }));
+      } else {
+        setMdAction((prev) => ({
+          ...prev,
+          [group.key]: {
+            message: `Imported ${data.pricing?.imported ?? 0} prices, ${data.caps?.imported ?? 0} capability sets`,
+          },
+        }));
+        await fetchData();
+      }
+    } catch {
+      setMdAction((prev) => ({ ...prev, [group.key]: { error: "Import failed" } }));
+    }
+  };
+
+  const handleRefreshModelsDev = async () => {
+    setRefreshing(true);
+    try {
+      await fetch("/api/models-dev/refresh", { method: "POST" });
+      await fetchData();
+    } catch (error) {
+      console.log("Error refreshing models.dev:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6">
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-text-muted">
+          All built-in and custom models across providers.
+          {modelsDev ? (
+            <>
+              {" "}models.dev catalog: {modelsDev.providers.length} providers
+              {modelsDev.fetchedAt ? `, updated ${new Date(modelsDev.fetchedAt).toLocaleString()}` : ""}
+              {modelsDev.stale ? " (stale)" : ""}.
+            </>
+          ) : (
+            " models.dev catalog is unavailable."
+          )}
+        </p>
+        <Button
+          variant="secondary"
+          icon="refresh"
+          onClick={handleRefreshModelsDev}
+          disabled={refreshing}
+          className="w-full sm:w-auto whitespace-nowrap"
+        >
+          {refreshing ? "Refreshing..." : "Refresh models.dev"}
+        </Button>
+      </div>
+
+      {/* Search + provider filter */}
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by model id, name or alias..."
+          className={`${inputClass} flex-1`}
+        />
+        <select
+          value={providerFilter}
+          onChange={(e) => setProviderFilter(e.target.value)}
+          className={`${inputClass} sm:w-64`}
+        >
+          <option value="">All providers</option>
+          {groups.map((g) => (
+            <option key={g.key} value={g.key}>
+              {g.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Groups */}
+      {visibleGroups.length === 0 ? (
+        <Card>
+          <p className="text-center py-8 text-sm text-text-muted">No models found.</p>
+        </Card>
+      ) : (
+        visibleGroups.map((group) => {
+          const mdTarget = modelsDev
+            ? resolveModelsDevProviderId(group.providerId, catalogIds) ||
+              resolveModelsDevProviderId(group.key, catalogIds)
+            : null;
+          const action = mdAction[group.key];
+          return (
+            <Card key={group.key}>
+              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ProviderIcon providerId={group.providerId} size={20} fallbackText={group.name.charAt(0)} />
+                  <h3 className="font-semibold text-text-main truncate">{group.name}</h3>
+                  <span className="text-xs text-text-muted">{group.models.length}</span>
+                </div>
+                {mdTarget && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon="download"
+                    onClick={() => handleModelsDevImport(group)}
+                    disabled={action?.loading}
+                  >
+                    {action?.loading ? "Importing..." : "Import from models.dev"}
+                  </Button>
+                )}
+              </div>
+              {action?.message && <p className="text-xs text-green-600 mb-2">{action.message}</p>}
+              {action?.error && <p className="text-xs text-red-500 mb-2">{action.error}</p>}
+              <div className="flex flex-col gap-1.5">
+                {group.models.map((row) => (
+                  <ModelRow
+                    key={row.key}
+                    row={row}
+                    caps={getCaps(`${row.providerAlias}/${row.id}`)}
+                    alias={getAliasFor(row)}
+                    disabled={isDisabled(row)}
+                    price={getPricingFor(row)}
+                    onEdit={() => openEdit(row)}
+                    onToggleDisabled={() => handleToggleDisabled(row, isDisabled(row))}
+                    onDelete={row.isCustom ? () => handleDeleteCustom(row) : null}
+                  />
+                ))}
+              </div>
+            </Card>
+          );
+        })
+      )}
+
+      {editing && (
+        <EditModelModal
+          isOpen={!!editing}
+          onClose={() => setEditing(null)}
+          model={editing}
+          onSaved={fetchData}
+        />
+      )}
+
+      <ConfirmModal
+        isOpen={!!confirmState}
+        onClose={() => setConfirmState(null)}
+        onConfirm={confirmState?.onConfirm}
+        title={confirmState?.title || ""}
+        message={confirmState?.message || ""}
+        confirmText="Delete"
+      />
+    </div>
+  );
+}
+
+function ModelRow({ row, caps, alias, disabled, price, onEdit, onToggleDisabled, onDelete }) {
+  const meta = formatModelMeta(caps, price);
+  return (
+    <div
+      className={`flex items-center gap-3 px-3 py-2 rounded-lg border border-border-subtle hover:bg-sidebar/50 ${
+        disabled ? "opacity-60" : ""
+      }`}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium text-text-main truncate">{alias || row.name}</span>
+          {row.isCustom && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold uppercase">
+              Custom
+            </span>
+          )}
+          {disabled && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-500/10 text-gray-500 font-semibold uppercase">
+              Disabled
+            </span>
+          )}
+          <CapacityBadges caps={caps} size={14} />
+        </div>
+        <p className="text-xs text-text-muted font-mono truncate">{row.id}</p>
+        {meta && <p className="text-xs text-text-muted mt-0.5">{meta}</p>}
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <button
+          onClick={onEdit}
+          title="Edit model"
+          className="p-1.5 hover:bg-sidebar rounded text-text-muted hover:text-primary"
+        >
+          <span className="material-symbols-outlined text-base">edit</span>
+        </button>
+        <button
+          onClick={onToggleDisabled}
+          title={disabled ? "Enable model" : "Disable model"}
+          className="p-1.5 hover:bg-sidebar rounded text-text-muted hover:text-primary"
+        >
+          <span className="material-symbols-outlined text-base">
+            {disabled ? "visibility" : "visibility_off"}
+          </span>
+        </button>
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            title="Delete custom model"
+            className="p-1.5 hover:bg-red-50 rounded text-red-500"
+          >
+            <span className="material-symbols-outlined text-base">delete</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ModelRow.propTypes = {
+  row: PropTypes.shape({
+    key: PropTypes.string,
+    providerId: PropTypes.string,
+    providerAlias: PropTypes.string,
+    id: PropTypes.string,
+    name: PropTypes.string,
+    isCustom: PropTypes.bool,
+  }).isRequired,
+  caps: PropTypes.object,
+  alias: PropTypes.string,
+  disabled: PropTypes.bool,
+  price: PropTypes.object,
+  onEdit: PropTypes.func.isRequired,
+  onToggleDisabled: PropTypes.func.isRequired,
+  onDelete: PropTypes.func,
+};

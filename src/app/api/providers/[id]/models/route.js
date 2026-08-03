@@ -467,6 +467,25 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: "Connection not found" }, { status: 404 });
     }
 
+    // Lightweight capability probe (?check=1) — no upstream call. Lets the UI
+    // decide whether to show the "Import Models" button for this provider.
+    if (new URL(request.url).searchParams.get("check") === "1") {
+      if (isOpenAICompatibleProvider(connection.provider) || isAnthropicCompatibleProvider(connection.provider)) {
+        const hasBaseUrl = !!connection.providerSpecificData?.baseUrl;
+        return NextResponse.json({
+          supported: hasBaseUrl,
+          ...(hasBaseUrl ? {} : { reason: "No base URL configured for compatible provider" }),
+        });
+      }
+      if (PROVIDER_MODELS_CONFIG[connection.provider]) {
+        return NextResponse.json({ supported: true });
+      }
+      return NextResponse.json({
+        supported: false,
+        reason: `Provider ${connection.provider} does not support models listing`,
+      });
+    }
+
     if (isOpenAICompatibleProvider(connection.provider)) {
       const baseUrl = connection.providerSpecificData?.baseUrl;
       if (!baseUrl) {
