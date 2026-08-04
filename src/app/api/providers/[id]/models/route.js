@@ -4,15 +4,14 @@ import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider } from "@/sha
 import { GEMINI_CONFIG } from "@/lib/oauth/constants/oauth";
 import { refreshGoogleToken, refreshCodexToken, updateProviderCredentials } from "@/sse/services/tokenRefresh";
 import { resolveOllamaLocalHost } from "open-sse/config/providers.js";
-import { getModelsByProviderId } from "open-sse/config/providerModels.js";
 import { resolveKiroModels } from "open-sse/services/kiroModels.js";
 import { resolveKimchiModels } from "open-sse/services/kimchiModels.js";
 import { resolveQoderModels } from "open-sse/services/qoderModels.js";
 import { resolveGrokCliModels } from "open-sse/services/grokCliModels.js";
 import { resolveConnectionProxyConfig } from "@/lib/network/connectionProxy";
 import { resolveCursorModels } from "open-sse/services/cursorModels.js";
-import { resolveClinepassModels } from "open-sse/services/clinepassModels.js";
-import REGISTRY from "open-sse/providers/registry/index.js";
+import { resolveClinepassModels, resolveClineModels } from "open-sse/services/clinepassModels.js";
+import { getRegistryEntry, deriveModelsEndpoint, fetchViaDerivedEndpoint, parseOpenAIStyleModels, getStaticProviderModels } from "@/lib/providerModels/deriveModelsEndpoint.js";
 
 const GEMINI_CLI_MODELS_URL = "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels";
 
@@ -22,11 +21,6 @@ const GEMINI_CLI_MODELS_URL = "https://cloudcode-pa.googleapis.com/v1internal:fe
 // back 200 with those entries quietly missing instead of erroring.
 const CODEX_CLIENT_VERSION = "0.144.6";
 const CODEX_MODELS_URL = `https://chatgpt.com/backend-api/codex/models?client_version=${CODEX_CLIENT_VERSION}`;
-
-const parseOpenAIStyleModels = (data) => {
-  if (Array.isArray(data)) return data;
-  return data?.data || data?.models || data?.results || [];
-};
 
 const parseGeminiCliModels = (data) => {
   if (Array.isArray(data?.models)) {
@@ -91,66 +85,6 @@ const resolveQwenModelsUrl = (connection) => {
     return `${value.replace(/\/$/, "")}/models`;
   }
   return `https://${value.replace(/\/$/, "")}/v1/models`;
-};
-
-const getStaticProviderModels = (providerId) =>
-  getModelsByProviderId(providerId).map((model) => ({
-    ...model,
-    id: model.id,
-    name: model.name || model.id,
-  }));
-
-// Generic models-listing support for providers without an explicit
-// PROVIDER_MODELS_CONFIG entry. Derives a models endpoint from the registry:
-// `modelsFetcher.url` wins, otherwise an OpenAI-style `<base>/chat/completions`
-// (or Anthropic-style `<base>/messages`) baseUrl maps to `<base>/models`.
-const getRegistryEntry = (providerId) =>
-  REGISTRY.find((r) => r.id === providerId);
-
-const deriveModelsEndpoint = (entry) => {
-  if (!entry) return null;
-  const kinds = entry.serviceKinds ?? ["llm"];
-  if (!kinds.includes("llm")) return null;
-  if (entry.modelsFetcher?.url) return { url: entry.modelsFetcher.url, style: "openai" };
-  const baseUrl = entry.transport?.baseUrl;
-  if (typeof baseUrl !== "string" || !baseUrl.startsWith("http")) return null;
-  if (baseUrl.includes("{")) return null; // unresolved placeholder (e.g. cloudflare {accountId})
-  const trimmed = baseUrl.replace(/\/+$/, "");
-  if (trimmed.endsWith("/chat/completions")) {
-    return { url: `${trimmed.slice(0, -"/chat/completions".length)}/models`, style: "openai" };
-  }
-  if (trimmed.endsWith("/messages")) {
-    return { url: `${trimmed.slice(0, -"/messages".length)}/models`, style: "anthropic" };
-  }
-  return null;
-};
-
-// Best-effort live fetch through a derived endpoint; on any failure falls back
-// to the provider's static catalog with a warning (never throws).
-const fetchViaDerivedEndpoint = async (endpoint, connection) => {
-  const token = connection.apiKey || connection.accessToken;
-  const headers = { "Content-Type": "application/json", Accept: "application/json" };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-    if (endpoint.style === "anthropic") {
-      headers["x-api-key"] = token;
-      headers["anthropic-version"] = "2023-06-01";
-    }
-  }
-  try {
-    const response = await fetch(endpoint.url, { method: "GET", headers });
-    if (response.ok) {
-      const data = await response.json();
-      const models = parseOpenAIStyleModels(data);
-      if (models.length) return { models };
-    }
-  } catch (error) {
-    console.log(`Derived models endpoint failed for ${connection.provider} (falling back to static):`, error.message);
-  }
-  return {
-    models: getStaticProviderModels(connection.provider),
-    warning: `Failed to fetch live models from ${endpoint.url}; falling back to static catalog.`,
-  };
 };
 
 // Generic custom resolver for OAuth providers that need refresh-on-401 + token persist.
@@ -502,6 +436,21 @@ const PROVIDER_MODELS_CONFIG = {
       return {
         models: getStaticProviderModels("clinepass"),
         warning: "ClinePass returned no live models; falling back to static catalog.",
+      };
+    },
+  },
+  // Cline shares the upstream /models endpoint with ClinePass, but `cline-pass/*`
+  // ids are valid only for ClinePass connections — resolveClineModels excludes them.
+  cline: {
+    customResolver: async (connection) => {
+      const result = await resolveClineModels({
+        accessToken: connection.accessToken,
+        apiKey: connection.apiKey,
+      });
+      if (result?.models?.length) return { models: result.models };
+      return {
+        models: getStaticProviderModels("cline"),
+        warning: "Cline returned no live models; falling back to static catalog.",
       };
     },
   },
