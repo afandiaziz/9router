@@ -71,11 +71,15 @@ function resolveCaps(byFull, byId, overrides, key) {
   if (!key) return null;
   if (byFull[key]) return byFull[key]; // built-ins: server already merged overrides
   const bare = key.includes("/") ? key.slice(key.indexOf("/") + 1) : key;
-  if (byId[bare]) return byId[bare];
   const provider = key.includes("/") ? key.slice(0, key.indexOf("/")) : null;
-  const c = getCapabilitiesForModel(provider, bare);
+  // Provider-specific override wins over a cross-provider byId match
+  // (e.g. custom "ollama/glm-5.2" must not inherit built-in glm-5.2 caps).
   const override = provider ? overrides[`${provider}|${bare}`] : null;
-  return pickCaps(override ? { ...c, ...override } : c);
+  if (override) {
+    return pickCaps({ ...getCapabilitiesForModel(provider, bare), ...override });
+  }
+  if (byId[bare]) return byId[bare];
+  return pickCaps(getCapabilitiesForModel(provider, bare));
 }
 
 export function useModelCaps() {
