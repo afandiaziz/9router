@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { Modal, Button } from "@/shared/components";
+import { invalidateModelCapsCache } from "@/shared/hooks/useModelCaps";
+import { invalidatePricingCache } from "@/shared/hooks/usePricing";
 
 const BOOL_CAPS = [
   ["vision", "Vision (image input)"],
@@ -127,6 +129,8 @@ export default function EditModelModal({ isOpen, onClose, model, onSaved }) {
         );
       }
 
+      invalidateModelCapsCache();
+      invalidatePricingCache();
       onSaved?.();
       onClose();
     } catch (err) {
@@ -138,13 +142,21 @@ export default function EditModelModal({ isOpen, onClose, model, onSaved }) {
 
   const handleResetCaps = async () => {
     setSaving(true);
+    setError("");
     try {
-      await fetch(
+      const res = await fetch(
         `/api/models/caps?provider=${encodeURIComponent(model.providerAlias)}&model=${encodeURIComponent(model.id)}`,
         { method: "DELETE" }
       );
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to reset capabilities");
+      }
+      invalidateModelCapsCache();
       onSaved?.();
       onClose();
+    } catch (err) {
+      setError(err.message || "Failed to reset capabilities");
     } finally {
       setSaving(false);
     }
@@ -152,13 +164,21 @@ export default function EditModelModal({ isOpen, onClose, model, onSaved }) {
 
   const handleResetPricing = async () => {
     setSaving(true);
+    setError("");
     try {
-      await fetch(
+      const res = await fetch(
         `/api/pricing?provider=${encodeURIComponent(model.providerAlias)}&model=${encodeURIComponent(model.id)}`,
         { method: "DELETE" }
       );
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to reset pricing");
+      }
+      invalidatePricingCache();
       onSaved?.();
       onClose();
+    } catch (err) {
+      setError(err.message || "Failed to reset pricing");
     } finally {
       setSaving(false);
     }

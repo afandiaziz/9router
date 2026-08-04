@@ -515,18 +515,19 @@ export default function ProviderDetailPage() {
   }, [providerId]);
 
   // Probe whether this provider supports upstream models listing (?check=1,
-  // no upstream call). Drives visibility of the "Import Models" button.
+  // no upstream call). Drives visibility of the "Import Models" button. For
+  // compatible providers the check requires a Base URL on the connection.
   const activeConnectionId = connections.find((conn) => conn.isActive !== false)?.id || null;
   useEffect(() => {
     setImportSupported(false);
-    if (isCompatible || !activeConnectionId) return;
+    if (!activeConnectionId) return;
     let cancelled = false;
     fetch(`/api/providers/${activeConnectionId}/models?check=1`)
       .then((res) => res.json())
       .then((data) => { if (!cancelled) setImportSupported(data.supported === true); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [activeConnectionId, isCompatible]);
+  }, [activeConnectionId]);
 
   const handleSetAlias = async (modelId, alias, providerAliasOverride = providerAlias) => {
     const fullModel = `${providerAliasOverride}/${modelId}`;
@@ -1068,6 +1069,7 @@ export default function ProviderDetailPage() {
           connections={connections}
           isAnthropic={isAnthropicCompatible}
           onModelsChanged={fetchCustomModels}
+          importSupported={importSupported}
         />
       );
     }

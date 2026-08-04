@@ -6,6 +6,17 @@ import { useState, useEffect, useCallback } from "react";
 let cache = null; // { provider: { model: { input, output, ... } } } | null
 let inflight = null;
 
+const PRICING_CHANGED_EVENT = "pricingChanged";
+
+/**
+ * Drop the module cache and notify mounted hooks to refetch.
+ * Call after any pricing mutation (edit/reset/models.dev import).
+ */
+export function invalidatePricingCache() {
+  cache = null;
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(PRICING_CHANGED_EVENT));
+}
+
 function loadPricing() {
   if (cache) return Promise.resolve(cache);
   if (inflight) return inflight;
@@ -27,13 +38,20 @@ export function usePricing() {
   const [pricing, setPricing] = useState(() => cache || {});
 
   useEffect(() => {
+    let alive = true;
     if (cache) {
       setPricing(cache);
-      return;
+    } else {
+      loadPricing().then((data) => { if (alive) setPricing(data); });
     }
-    let alive = true;
-    loadPricing().then((data) => { if (alive) setPricing(data); });
-    return () => { alive = false; };
+    const onChanged = () => {
+      loadPricing().then((data) => { if (alive) setPricing(data); });
+    };
+    window.addEventListener(PRICING_CHANGED_EVENT, onChanged);
+    return () => {
+      alive = false;
+      window.removeEventListener(PRICING_CHANGED_EVENT, onChanged);
+    };
   }, []);
 
   // providerKey: provider alias or id (merged pricing may be keyed by either)

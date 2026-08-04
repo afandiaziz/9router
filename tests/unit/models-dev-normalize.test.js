@@ -48,9 +48,10 @@ describe("models.dev normalizeModel", () => {
     expect(normalized.caps.vision).toBe(false);
   });
 
-  it("treats missing tool_call as supported and explicit false as unsupported", () => {
-    expect(normalizeModel({ id: "a" }).caps.tools).toBe(true);
+  it("only sets tools when tool_call is explicitly present", () => {
+    expect(normalizeModel({ id: "a" }).caps).not.toHaveProperty("tools");
     expect(normalizeModel({ id: "b", tool_call: false }).caps.tools).toBe(false);
+    expect(normalizeModel({ id: "c", tool_call: true }).caps.tools).toBe(true);
   });
 
   it("omits contextWindow/maxOutput when limits are missing", () => {

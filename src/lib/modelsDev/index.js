@@ -78,8 +78,10 @@ export function normalizeModel(entry) {
     imageOutput: output.includes("image"),
     audioOutput: output.includes("audio"),
     reasoning: entry.reasoning === true,
-    tools: entry.tool_call !== false,
   };
+  // Only override static capabilities when models.dev explicitly reports tool
+  // support — an absent tool_call must not clobber an existing `tools: false`.
+  if (typeof entry.tool_call === "boolean") caps.tools = entry.tool_call;
   if (typeof limit.context === "number") caps.contextWindow = limit.context;
   if (typeof limit.output === "number") caps.maxOutput = limit.output;
 

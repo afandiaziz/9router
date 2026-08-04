@@ -7,6 +7,17 @@ import { getCapabilitiesForModel } from "open-sse/providers/capabilities.js";
 let cache = null; // { byFull, byId, overrides } | null
 let inflight = null;
 
+const CAPS_CHANGED_EVENT = "modelCapsChanged";
+
+/**
+ * Drop the module cache and notify mounted hooks to refetch.
+ * Call after any capabilities mutation (edit/reset/models.dev import).
+ */
+export function invalidateModelCapsCache() {
+  cache = null;
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(CAPS_CHANGED_EVENT));
+}
+
 function buildMaps(models, overrides) {
   const byFull = {};
   const byId = {};
@@ -73,17 +84,25 @@ export function useModelCaps() {
   const [overrides, setOverrides] = useState(() => cache?.overrides || {});
 
   useEffect(() => {
-    if (cache) {
-      setByFull(cache.byFull);
-      setById(cache.byId);
-      setOverrides(cache.overrides);
-      return;
-    }
     let alive = true;
-    loadModelCaps().then((maps) => {
-      if (alive) { setByFull(maps.byFull); setById(maps.byId); setOverrides(maps.overrides); }
-    });
-    return () => { alive = false; };
+    const apply = (maps) => {
+      setByFull(maps.byFull);
+      setById(maps.byId);
+      setOverrides(maps.overrides);
+    };
+    if (cache) {
+      apply(cache);
+    } else {
+      loadModelCaps().then((maps) => { if (alive) apply(maps); });
+    }
+    const onChanged = () => {
+      loadModelCaps().then((maps) => { if (alive) apply(maps); });
+    };
+    window.addEventListener(CAPS_CHANGED_EVENT, onChanged);
+    return () => {
+      alive = false;
+      window.removeEventListener(CAPS_CHANGED_EVENT, onChanged);
+    };
   }, []);
 
   const getCaps = useCallback(

@@ -7,7 +7,8 @@ import ProviderIcon from "@/shared/components/ProviderIcon";
 import { PROVIDER_MODELS, getModelKind } from "@/shared/constants/models";
 import { getProviderAlias, getProviderByAlias } from "@/shared/constants/providers";
 import { getCapabilitiesForModel } from "open-sse/providers/capabilities.js";
-import { useModelCaps } from "@/shared/hooks/useModelCaps";
+import { useModelCaps, invalidateModelCapsCache } from "@/shared/hooks/useModelCaps";
+import { invalidatePricingCache } from "@/shared/hooks/usePricing";
 import { resolveModelsDevProviderId } from "@/lib/modelsDev/providerMap.js";
 import { formatModelMeta } from "@/shared/utils/modelMeta";
 import EditModelModal from "./EditModelModal";
@@ -241,6 +242,8 @@ export default function ModelsPage() {
             message: `Imported ${data.pricing?.imported ?? 0} prices, ${data.caps?.imported ?? 0} capability sets`,
           },
         }));
+        invalidateModelCapsCache();
+        invalidatePricingCache();
         await fetchData();
       }
     } catch {

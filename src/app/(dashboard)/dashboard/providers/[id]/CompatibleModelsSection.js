@@ -72,7 +72,7 @@ function CompatibleModelRow({ modelId, fullModel, copied, onCopy, onDeleteAlias,
   );
 }
 
-export default function CompatibleModelsSection({ providerStorageAlias, providerDisplayAlias, modelAliases, customModels, copied, onCopy, onDeleteAlias, onAddCustomModel, onDeleteCustomModel, connections, isAnthropic, onModelsChanged }) {
+export default function CompatibleModelsSection({ providerStorageAlias, providerDisplayAlias, modelAliases, customModels, copied, onCopy, onDeleteAlias, onAddCustomModel, onDeleteCustomModel, connections, isAnthropic, onModelsChanged, importSupported = false }) {
   const [newModel, setNewModel] = useState("");
   const [adding, setAdding] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -124,7 +124,9 @@ export default function CompatibleModelsSection({ providerStorageAlias, provider
   };
 
   const activeConnectionId = connections.find((conn) => conn.isActive !== false)?.id || null;
-  const canImport = !!activeConnectionId;
+  // Import requires an active connection with a Base URL configured
+  // (probed via ?check=1 on the parent page).
+  const canImport = !!activeConnectionId && importSupported === true;
   const existingIds = new Set(allModels.map((m) => m.id));
 
   return (
@@ -156,7 +158,9 @@ export default function CompatibleModelsSection({ providerStorageAlias, provider
 
       {!canImport && (
         <p className="text-xs text-text-muted">
-          Add a connection to enable importing models.
+          {activeConnectionId
+            ? "Set a Base URL on the active connection to enable importing models."
+            : "Add a connection to enable importing models."}
         </p>
       )}
 
@@ -206,4 +210,5 @@ CompatibleModelsSection.propTypes = {
   })).isRequired,
   isAnthropic: PropTypes.bool,
   onModelsChanged: PropTypes.func,
+  importSupported: PropTypes.bool,
 };
