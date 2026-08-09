@@ -207,7 +207,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
   const [tableView, setTableView] = useState("model");
-  const [viewMode, setViewMode] = useState("costs");
+  const [viewMode, setViewMode] = useState("tokens");
   const switchViewMode = useCallback((mode) => {
     setViewMode(mode);
     setSortBy("rawModel");
