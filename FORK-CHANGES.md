@@ -81,6 +81,27 @@ aktif). Test: 88 gagal / 1677 lulus — **nol regresi** vs baseline v0.5.50 (88 
 | [#1666](https://github.com/decolua/9router/pull/1666) | mask request debug log |
 | [#2776](https://github.com/decolua/9router/pull/2776) | enkripsi secret koneksi provider at-rest (AES-256-GCM) |
 
+## Tier 3 — UI/UX usage, observability, bulk actions (di `master`)
+
+Merge commit: `795c6d59` · 7 PR. Test: 88 gagal / 1810 lulus — **nol regresi**.
+
+| PR | Isi |
+|---|---|
+| [#3051](https://github.com/decolua/9router/pull/3051) | stream kosong dicatat `error` (bukan `success`) + error frame in-band ke klien |
+| [#3163](https://github.com/decolua/9router/pull/3163) | chart usage per jam mengikuti timezone browser (param `tz`) |
+| [#3068](https://github.com/decolua/9router/pull/3068) | bug React reconciliation saat ganti viewMode; sort di-reset |
+| [#2972](https://github.com/decolua/9router/pull/2972) | default view mode `tokens` — **resolusi manual**, konflik dengan #3068 |
+| [#2811](https://github.com/decolua/9router/pull/2811) | `cachedInputTokens` commandcode masuk statistik |
+| [#2777](https://github.com/decolua/9router/pull/2777) | bulk enable/disable koneksi provider |
+| [#2998](https://github.com/decolua/9router/pull/2998) | paginasi daftar koneksi provider (10/halaman) |
+
+### Kenapa #3051 penting
+
+Deskripsi PR menyebut kasus produksi 2026-08-05: akun Claude dengan OAuth kedaluwarsa tetap
+`isActive`, request dirutekan ke sana, klien menerima **HTTP 200 dengan 0 byte**, dan observability
+mencatatnya `success`. Ini konsisten dengan anomali di instance ini — 24.762 request historis,
+**semua** berstatus `ok`, nol error. Kegagalan model ini memang tak pernah tercatat sebelumnya.
+
 ---
 
 ## Perubahan milik fork (bukan dari upstream)
@@ -89,6 +110,7 @@ aktif). Test: 88 gagal / 1677 lulus — **nol regresi** vs baseline v0.5.50 (88 
 |---|---|
 | `2cdf0143` | CI: publish hanya ke GHCR (fork tak punya secret Docker Hub), amd64 saja, tag `latest` tanpa syarat |
 | `9ed5be64` | Revert PR #664 — lihat catatan di bawah |
+| (di `tier3`) | `fix(test)`: guard struktural #2998 memakai path cwd-relative → gagal karena suite jalan dari `tests/`. Di-anchor ke `import.meta.url`. |
 
 ### Kenapa PR #664 di-revert
 
