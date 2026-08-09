@@ -75,6 +75,7 @@ export class DefaultExecutor extends BaseExecutor {
       if (this.config.quirks?.dropClientMetadata) {
         delete transformed.client_metadata;
       }
+      this.defaultResponsesTextFormat(transformed);
       stripUnsupportedParams(this.provider, model, transformed);
       // Ask OpenAI-compatible upstreams to include usage in the final stream
       // chunk so /v1 streaming requests record real token counts instead of
@@ -85,6 +86,19 @@ export class DefaultExecutor extends BaseExecutor {
     }
 
     return injectReasoningContent({ provider: this.provider, model, body: transformed });
+  }
+
+  // Some Responses-compatible upstreams (e.g. LM Studio) reject a request whose
+  // `text` is an object missing `text.format` with a 400 missing_required_parameter.
+  // The Responses API default for that field is { type: "text" }, so default it
+  // for openai-compatible "responses" providers before forwarding upstream. #2093
+  defaultResponsesTextFormat(body) {
+    if (!this.provider?.startsWith?.("openai-compatible-")) return;
+    if (!this.provider.includes("responses")) return;
+    const text = body.text;
+    if (!text || typeof text !== "object" || Array.isArray(text)) return;
+    if (text.format !== undefined) return;
+    body.text = { ...text, format: { type: "text" } };
   }
 
   // Fallback json_schema → json_object for openai-compatible providers without native Structured Output.
@@ -105,6 +119,36 @@ export class DefaultExecutor extends BaseExecutor {
       messages.unshift({ role: "system", content: prompt });
     }
     return { ...body, messages, response_format: { type: "json_object" } };
+  }
+
+  /**
+   * Override parseError to extract precise resetsAtMs from MiniMax 429 errors.
+   * MiniMax returns: { error: { message: "...", retryAfter: "2025-05-02T12:00:00Z", ... } }
+   * Without this, the base class returns no resetsAtMs → exponential backoff instead of precise wait.
+   */
+  parseError(response, bodyText) {
+    if (response.status === 429 && bodyText) {
+      try {
+        const json = JSON.parse(bodyText);
+        const err = json?.error || json;
+        const retryAfter = err?.retryAfter;
+        if (retryAfter) {
+          const ms = new Date(retryAfter).getTime();
+          const now = Date.now();
+          if (ms > now) {
+            return { status: 429, message: err.message || bodyText, resetsAtMs: ms };
+          }
+        }
+        const retryMs = err?.retry_after_ms || err?.retryAfterMs;
+        if (typeof retryMs === "number" && retryMs > 0) {
+          const resetsAtMs = now + retryMs;
+          if (resetsAtMs > now) {
+            return { status: 429, message: err.message || bodyText, resetsAtMs };
+          }
+        }
+      } catch { /* fall through to default */ }
+    }
+    return super.parseError(response, bodyText);
   }
 
   buildUrl(model, stream, urlIndex = 0, credentials = null) {

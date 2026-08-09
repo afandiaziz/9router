@@ -30,7 +30,10 @@ export function extractUsageFromResponse(responseBody) {
       prompt_tokens: responseBody.usage.input_tokens || 0,
       completion_tokens: responseBody.usage.output_tokens || 0,
       cache_read_input_tokens: responseBody.usage.cache_read_input_tokens,
-      cache_creation_input_tokens: responseBody.usage.cache_creation_input_tokens
+      cache_creation_input_tokens: responseBody.usage.cache_creation_input_tokens,
+      cost_usd: responseBody.usage.cost_usd,
+      cost_in_usd: responseBody.usage.cost_in_usd,
+      cost_in_usd_ticks: responseBody.usage.cost_in_usd_ticks
     };
   }
 
@@ -40,17 +43,22 @@ export function extractUsageFromResponse(responseBody) {
       prompt_tokens: responseBody.usage.prompt_tokens || 0,
       completion_tokens: responseBody.usage.completion_tokens || 0,
       cached_tokens: responseBody.usage.prompt_tokens_details?.cached_tokens,
-      reasoning_tokens: responseBody.usage.completion_tokens_details?.reasoning_tokens
+      reasoning_tokens: responseBody.usage.completion_tokens_details?.reasoning_tokens,
+      cost_usd: responseBody.usage.cost_usd,
+      cost_in_usd: responseBody.usage.cost_in_usd,
+      cost_in_usd_ticks: responseBody.usage.cost_in_usd_ticks
     };
   }
 
-  // Gemini format
+  // Gemini format — thoughts sit outside candidates upstream; fold them in so
+  // completion_tokens stays reasoning-inclusive (see extractUsage in usageTracking.js)
   if (responseBody.usageMetadata) {
+    const thoughts = responseBody.usageMetadata.thoughtsTokenCount || 0;
     return {
       prompt_tokens: responseBody.usageMetadata.promptTokenCount || 0,
-      completion_tokens: responseBody.usageMetadata.candidatesTokenCount || 0,
+      completion_tokens: (responseBody.usageMetadata.candidatesTokenCount || 0) + thoughts,
       cached_tokens: responseBody.usageMetadata.cachedContentTokenCount || 0,
-      reasoning_tokens: responseBody.usageMetadata.thoughtsTokenCount || 0
+      reasoning_tokens: thoughts
     };
   }
 

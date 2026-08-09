@@ -399,6 +399,12 @@ export function formatCost(cost) {
   return `$${cost.toFixed(2)}`;
 }
 
+function nonnegativeFiniteNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
 /**
  * Calculate cost from tokens and pricing
  * @param {object} tokens
@@ -406,7 +412,12 @@ export function formatCost(cost) {
  * @returns {number} cost in dollars
  */
 export function calculateCostFromTokens(tokens, pricing) {
-  if (!tokens || !pricing) return 0;
+  if (!tokens) return 0;
+  const directCost = nonnegativeFiniteNumber(tokens.cost_usd ?? tokens.cost_in_usd);
+  if (directCost !== null) return directCost;
+  const ticks = nonnegativeFiniteNumber(tokens.cost_in_usd_ticks);
+  if (ticks !== null) return ticks / 10_000_000_000;
+  if (!pricing) return 0;
 
   let cost = 0;
 
@@ -426,9 +437,14 @@ export function calculateCostFromTokens(tokens, pricing) {
   const outputTokens = tokens.completion_tokens || tokens.output_tokens || 0;
   cost += outputTokens * (pricing.output / 1000000);
 
+  // completion_tokens is reasoning-inclusive (same contract as the cache-inclusive
+  // prompt_tokens above): OpenAI counts reasoning_tokens inside completion_tokens, and
+  // our gemini normalization folds thoughtsTokenCount in. They are therefore already
+  // billed at the output rate — charge only the difference when a model prices
+  // reasoning apart from output.
   const reasoningTokens = tokens.reasoning_tokens || 0;
-  if (reasoningTokens > 0) {
-    cost += reasoningTokens * ((pricing.reasoning || pricing.output) / 1000000);
+  if (reasoningTokens > 0 && pricing.reasoning) {
+    cost += reasoningTokens * ((pricing.reasoning - pricing.output) / 1000000);
   }
 
   if (cacheCreationTokens > 0) {

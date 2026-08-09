@@ -164,6 +164,42 @@ function rotateModelsFromIndex(models, currentIndex) {
 }
 
 /**
+ * Track per-model quota exhaustion: modelStr → timestamp when it becomes available again.
+ * This persists across requests so exhausted models are skipped until their cooldown expires,
+ * rather than being retried from the top of the combo on every new request.
+ * @type {Map<string, number>}
+ */
+const modelSkipUntil = new Map();
+
+/**
+ * Mark a model as quota-exhausted for the given cooldown window.
+ * @param {string} modelStr - The model identifier
+ * @param {number} cooldownMs - How long (ms) to skip this model
+ */
+function markModelExhausted(modelStr, cooldownMs) {
+  if (!cooldownMs || cooldownMs <= 0) return;
+  const existing = modelSkipUntil.get(modelStr) || 0;
+  const next = Date.now() + cooldownMs;
+  // Only extend the window, never shorten it
+  if (next > existing) modelSkipUntil.set(modelStr, next);
+}
+
+/**
+ * Return true if the model is still within its quota-exhaustion cooldown.
+ * @param {string} modelStr - The model identifier
+ * @returns {boolean}
+ */
+function isModelExhausted(modelStr) {
+  const until = modelSkipUntil.get(modelStr);
+  if (!until) return false;
+  if (Date.now() >= until) {
+    modelSkipUntil.delete(modelStr); // expired — clean up
+    return false;
+  }
+  return true;
+}
+
+/**
  * Get rotated model list based on strategy
  * @param {string[]} models - Array of model strings
  * @param {string} comboName - Name of the combo
@@ -218,17 +254,54 @@ export function resetComboRotation(comboName) {
  * @returns {string[]|null} Array of models or null if not a combo
  */
 export function getComboModelsFromData(modelStr, combosData) {
-  // Don't check if it's in provider/model format
-  if (modelStr.includes("/")) return null;
-  
+  // Resolve combo by full name first, then by basename (part after the last
+  // slash) so client configs like `provider/combo-name` still hit the combo
+  // instead of forwarding the raw string to the upstream provider.
+  const baseName = modelStr.includes("/") ? modelStr.split("/").pop() : null;
+
   // Handle both array and object formats
   const combos = Array.isArray(combosData) ? combosData : (combosData?.combos || []);
-  
-  const combo = combos.find(c => c.name === modelStr);
+
+  const combo = combos.find(c => c.name === modelStr) ||
+    (baseName ? combos.find(c => c.name === baseName) : null);
   if (combo && combo.models && combo.models.length > 0) {
     return combo.models;
   }
   return null;
+}
+
+/**
+ * Check whether a successful (2xx) response has a meaningful body.
+ * Returns true when the body is empty, an empty object/array, or has
+ * choices/content/text that are all empty — patterns that indicate the
+ * model produced no useful output despite returning 200.
+ * Streaming/opaque responses that can't be read as text are trusted.
+ * @param {Response} response
+ * @returns {Promise<boolean>}
+ */
+async function isBodyEmpty(response) {
+  const clone = response.clone();
+  let bodyText = "";
+  try {
+    bodyText = await clone.text();
+  } catch {
+    // Streaming or opaque response — trust the transport layer.
+    return false;
+  }
+  return (
+    !bodyText ||
+    bodyText === "{}" ||
+    bodyText === "[]" ||
+    bodyText === '{"choices":[]}' ||
+    bodyText === '{"choices":""}' ||
+    bodyText === '{"choices":[{}]}' ||
+    bodyText === '{"choices":[{"delta":{},"finish_reason":null}]}' ||
+    bodyText === '{"choices":[{"message":{"content":""}}]}' ||
+    bodyText === '{"choices":[{"message":{}}]}' ||
+    bodyText === '{"content":""}' ||
+    bodyText === '{"content":[]}' ||
+    bodyText === '{"text":""}'
+  );
 }
 
 /**
@@ -265,6 +338,15 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
 
   for (let i = 0; i < rotatedModels.length; i++) {
     const modelStr = rotatedModels[i];
+
+    // Skip models that are still within their quota-exhaustion cooldown from a previous request
+    if (isModelExhausted(modelStr)) {
+      log.info("COMBO", `Skipping exhausted model ${i + 1}/${rotatedModels.length}: ${modelStr} (quota cooldown active)`);
+      lastError = lastError || `${modelStr} quota exhausted`;
+      if (!lastStatus) lastStatus = 429;
+      continue;
+    }
+
     log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
 
     try {
@@ -272,8 +354,29 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       
       // Success (2xx) - return response
       if (result.ok) {
-        log.info("COMBO", `Model ${modelStr} succeeded`);
-        return result;
+        // Validate response body is not empty — some providers return 200
+        // with empty content when the model produces no meaningful output.
+        if (!(await isBodyEmpty(result))) {
+          log.info("COMBO", `Model ${modelStr} succeeded`);
+          return result;
+        }
+
+        // Body is empty on first attempt — retry the same model once before
+        // falling back. This catches transient empty responses from overloaded
+        // providers without immediately burning a combo slot.
+        log.warn("COMBO", `Model ${modelStr} returned 200 but empty body, retrying once`);
+        const retryResult = await handleSingleModel(body, modelStr);
+
+        if (retryResult.ok && !(await isBodyEmpty(retryResult))) {
+          log.info("COMBO", `Model ${modelStr} succeeded on retry`);
+          return retryResult;
+        }
+
+        // Retry also returned empty — fall through to next model.
+        // Do not set lastError so the final "all models failed" message
+        // reflects the most recent genuine failure, not the empty response.
+        log.warn("COMBO", `Model ${modelStr} still empty after retry, falling to next`);
+        continue;
       }
 
       // Extract error info from response
@@ -312,6 +415,14 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
           (result.status === 503 || result.status === 502 || result.status === 504)) {
         log.info("COMBO", `Model ${modelStr} transient ${result.status}, waiting ${cooldownMs}ms before next`);
         await new Promise(r => setTimeout(r, cooldownMs));
+      }
+
+      // For quota/auth errors with a long cooldown, mark the model as exhausted so
+      // subsequent requests skip it immediately instead of wasting time retrying.
+      // Only apply to substantial cooldowns (>5 s) to avoid skipping on transient errors.
+      if (cooldownMs && cooldownMs > 5000) {
+        markModelExhausted(modelStr, cooldownMs);
+        log.info("COMBO", `Model ${modelStr} marked exhausted for ${Math.round(cooldownMs / 1000)}s`);
       }
 
       // Fallback to next model
