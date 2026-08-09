@@ -8,8 +8,10 @@ import path from "node:path";
 import { describe, it, expect, beforeAll } from "vitest";
 import { CONNECTIONS_PER_PAGE, CONNECTIONS_MAX_PAGE_SIZE, computeConnectionPagination } from "../../src/app/(dashboard)/dashboard/providers/[id]/connectionsPagination.js";
 
+// Relative to this file, not process.cwd() — the suite runs from tests/.
 const PAGE_PATH = path.resolve(
-  "src/app/(dashboard)/dashboard/providers/[id]/page.js",
+  path.dirname(new URL(import.meta.url).pathname),
+  "../../src/app/(dashboard)/dashboard/providers/[id]/page.js",
 );
 
 describe("provider connections pagination — utility math (10/page)", () => {
