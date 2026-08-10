@@ -24,7 +24,7 @@ function CopyButton({ text, label }) {
   );
 }
 
-function Chip({ text, secondary }) {
+function Chip({ text }) {
   const [copied, setCopied] = useState(false);
   const copy = async (e) => {
     e.stopPropagation();
@@ -38,11 +38,21 @@ function Chip({ text, secondary }) {
     <span
       onClick={copy}
       title={`Click to copy: ${text}`}
-      className="px-2 py-1 bg-gray-800 rounded text-xs font-mono cursor-pointer hover:bg-gray-700 border border-transparent hover:border-blue-500 transition select-all"
+      className="px-2 py-1 bg-gray-800 rounded text-xs font-mono cursor-pointer hover:bg-gray-700 border border-transparent hover:border-blue-500 transition select-all inline-flex items-center gap-1"
     >
       {text}
-      {copied && <span className="text-green-400 ml-1">✓</span>}
-      {secondary && <span className="text-gray-500 ml-1">({secondary})</span>}
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={copied ? "#4ade80" : "currentColor"}
+        strokeWidth="2"
+        className="opacity-60 shrink-0"
+      >
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
     </span>
   );
 }
@@ -173,8 +183,8 @@ export default function CheckUsagePage() {
                     {result.perModel.map((m, i) => (
                       <div key={i} className="flex justify-between items-center bg-gray-800 p-2 rounded">
                         <div>
-                          <span className="font-mono text-sm">{m.alias}</span>
-                          {m.alias !== m.model && <span className="text-xs text-gray-500 ml-2">({m.model})</span>}
+                          <span className="font-mono text-sm">{m.alias || m.model}</span>
+                          {m.alias && (m.alias !== m.model) && <span className="text-xs text-gray-500 ml-2">({m.model})</span>}
                         </div>
                         <span className="text-sm text-gray-400">{m.tokens.toLocaleString()} tokens</span>
                       </div>
@@ -189,7 +199,7 @@ export default function CheckUsagePage() {
                   <p className="text-xs text-gray-500 mb-2">Click a model to copy its name.</p>
                   <div className="flex flex-wrap gap-2">
                     {result.allowedModels.map((m, i) => (
-                      <Chip key={i} text={m.alias || m.model} secondary={m.alias !== m.model ? m.model : null} />
+                      <Chip key={i} text={m.alias || m.model} />
                     ))}
                   </div>
                 </div>

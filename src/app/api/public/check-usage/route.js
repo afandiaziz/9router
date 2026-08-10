@@ -21,7 +21,9 @@ export async function POST(request) {
     // Base URL for how-to-use examples — derived from request host.
     const url = new URL(request.url);
     const baseUrl = `${url.protocol}//${url.host}`;
-    return NextResponse.json({ keyValid: true, keyPrefix: key.slice(0, 8) + "…", baseUrl, ...report });
+    // keyPrefix: sk-danton- + 4 chars after prefix
+    const keyPrefix = key.startsWith("sk-danton-") ? "sk-danton-" + key.slice("sk-danton-".length, "sk-danton-".length + 4) : key.slice(0, 8);
+    return NextResponse.json({ keyValid: true, keyPrefix, baseUrl, ...report });
   } catch (error) {
     console.error("check-usage error:", error);
     return NextResponse.json({ keyValid: false, error: "Server error" }, { status: 500 });

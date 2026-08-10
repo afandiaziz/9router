@@ -110,12 +110,26 @@ export default function QuotaModelPicker({ selected, onChange }) {
       {selected.some((s) => !Object.values(byProvider).some((arr) => arr.includes(s.model))) && (
         <div className="p-3 bg-gray-900 border-b border-gray-700">
           <p className="text-xs text-gray-400 mb-2">Manually Added</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="space-y-2">
             {selected
               .filter((s) => !Object.values(byProvider).some((arr) => arr.includes(s.model)))
               .map((s) => (
-                <div key={s.model} className="flex items-center gap-1 bg-gray-800 px-2 py-1 rounded">
-                  <span className="font-mono text-xs">{s.model}</span>
+                <div key={s.model} className="flex items-center gap-2 bg-gray-800 px-2 py-1 rounded">
+                  <span className="font-mono text-xs flex-1 truncate" title={s.model}>
+                    {s.model}
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Alias (optional)"
+                    value={getAlias(s.model)}
+                    onChange={(e) => setAlias(s.model, e.target.value)}
+                    className={`w-40 px-2 py-1 text-xs bg-gray-900 border rounded focus:outline-none ${
+                      aliasErrors[getAlias(s.model)] ? "border-red-500" : "border-gray-600"
+                    }`}
+                  />
+                  {aliasErrors[getAlias(s.model)] && (
+                    <span className="text-xs text-red-400">{aliasErrors[getAlias(s.model)]}</span>
+                  )}
                   <button
                     type="button"
                     onClick={() => removeManualModel(s.model)}

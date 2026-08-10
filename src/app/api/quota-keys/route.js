@@ -10,7 +10,7 @@ export async function GET() {
     for (const k of keys) {
       const p = await getQuotaKeyProgress(k.id);
       const { key, ...rest } = k;
-      withProgress.push({ ...rest, keyPrefix: key.slice(0, 8) + "…", progress: p });
+      withProgress.push({ ...rest, keyPrefix: key.startsWith("sk-danton-") ? "sk-danton-" + key.slice("sk-danton-".length, "sk-danton-".length + 4) : key.slice(0, 8), progress: p });
     }
     return NextResponse.json({ keys: withProgress });
   } catch (error) {

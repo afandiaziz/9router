@@ -334,8 +334,18 @@ export function extractApiKey(request) {
 
 /**
  * Validate API key (optional - for local use can skip)
+ * Accepts normal keys (apiKeys table) and quota keys (quotaKeys table, sk-danton-*).
  */
 export async function isValidApiKey(apiKey) {
   if (!apiKey) return false;
+  if (typeof apiKey === "string" && apiKey.startsWith("sk-danton-")) {
+    try {
+      const { getQuotaKeyByFullKey } = await import("@/lib/db/repos/quotaKeysRepo.js");
+      const key = await getQuotaKeyByFullKey(apiKey);
+      return !!key && key.isActive !== false;
+    } catch {
+      return false;
+    }
+  }
   return await validateApiKey(apiKey);
 }
