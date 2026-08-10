@@ -47,7 +47,7 @@ export async function handleChat(request, clientRawRequest = null) {
       headers: Object.fromEntries(request.headers.entries())
     };
   }
-  const modelStr = body.model;
+  let modelStr = body.model;
 
   // Request summary is emitted as the unified "▶" line in chatCore (has fmt/thinking/account)
 
