@@ -232,3 +232,26 @@ Rollback: `cp docker-compose.yml.bak docker-compose.yml && docker compose up -d`
 Dari 653 PR open upstream: **250 CLEAN** terhadap v0.5.50, 403 konflik. Dari yang clean: 165 ≤150
 baris, 144 punya test. Laporan lengkap berkategori pernah dibuat di `/tmp/full_report.txt` (tidak
 persisten — regenerasi bila perlu).
+
+## Tier 6 — production recovery (master)
+
+Merge commit: `08e394c36` · tag: `v0.5.50-fork6`
+
+| PR | Isi |
+|---|---|
+| [Server-side filter bug](https://github.com/decolua/9router/pull/#2998-followup) | Remove provider filter from `/api/providers/route.js` to restore compatibility |
+
+**Penyebab outage:** Server-side filtering di #2998 mengembalikan `{connections:[]}` saat:
+1. Request tidak punya valid session → auth guard return success dengan array kosong
+2. Parameter query malformed → SQL WHERE tidak match
+
+**Solusi:** Kembalikan ke pola fork2 — API return semua koneksi, client-side yang filter. Lebih reliable untuk dashboard yang sudah authenticated via session cookie.
+
+Deployed: `v0.5.50-fork6` via local tarball (GitHub Actions belum aktif). Data verified intact:
+- Connections: 3594 (active: 3558)
+- API keys: 348 (terenkripsi: 348/348)  
+- OAuth: 3246
+- Disk: 96% full
+
+---
+*Updated 2026-08-10*
