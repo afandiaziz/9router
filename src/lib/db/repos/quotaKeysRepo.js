@@ -61,9 +61,11 @@ export async function updateQuotaKey(id, data) {
   if (!existing) return null;
   const merged = { ...rowToQuotaKey(existing), ...data };
   if (!VALID_PERIODS.includes(merged.limitPeriod)) throw new Error("Invalid limitPeriod");
+  // Support optional key rotation (regenerate)
+  if (data.key) merged.key = data.key;
   db.run(
-    `UPDATE quotaKeys SET name = ?, isActive = ?, "limit" = ?, limitPeriod = ?, allowedModels = ?, notes = ?, updatedAt = ? WHERE id = ?`,
-    [merged.name, merged.isActive ? 1 : 0, merged.limit, merged.limitPeriod,
+    `UPDATE quotaKeys SET key = ?, name = ?, isActive = ?, "limit" = ?, limitPeriod = ?, allowedModels = ?, notes = ?, updatedAt = ? WHERE id = ?`,
+    [merged.key, merged.name, merged.isActive ? 1 : 0, merged.limit, merged.limitPeriod,
      stringifyJson(merged.allowedModels || []), merged.notes, new Date().toISOString(), id]
   );
   return rowToQuotaKey(db.get(`SELECT * FROM quotaKeys WHERE id = ?`, [id]));
