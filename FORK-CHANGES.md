@@ -2,7 +2,7 @@
 
 Catatan PR upstream yang di-cherry-pick ke fork ini. Basis: **v0.5.50** (`03f8487c`, upstream push terakhir 2026-08-05). Semua PR di bawah masih **open** di `decolua/9router` — upstream tidak me-merge satu PR pun sejak tanggal itu.
 
-Terakhir diperbarui: 2026-08-10 17:50.
+Terakhir diperbarui: 2026-08-10.
 
 ## Cara memakai file ini
 
@@ -104,7 +104,96 @@ Setelah deploy #3051, kita mulai melihat error records! Jadi jangan kaget kalau 
 
 ---
 
+## QUOTA SHARING (FEATURE BARU MILIK FORK) — ✅ DEPLOYED (forks 8–12)
+
+**Fitur buatan sendiri** — tidak berasal dari PR upstream mana pun. Terinspirasi fitur Quota Sharing di OmnIRoute. Dibangun di atas master dan di-deploy bertahap dari `v0.5.50-fork8` sampai `v0.5.50-fork12`.
+
+**Konsep:** buat API key khusus (`sk-danton-*`) yang bisa dibagikan ke pihak lain, dengan pembatasan model yang boleh dipakai + batas token. Key ini terpisah dari API key utama admin.
+
+| Fitur | Keterangan |
+|-------|-----------|
+| **Separate quota keys** | Prefix `sk-danton-`, 24 hex char acak setelah prefix. Bisa di-buat, di-edit, di-rotate, diaktifkan/nonaktifkan, dihapus. |
+| **Restriction model** | Tiap key punya daftar `allowedModels`. `[]` = semua model boleh. |
+| **Model alias** | Setiap model yang diizinkan bisa diberi alias. Quota user memakai nama alias (mis. `composer-2.5`); tanpa alias pakai nama model asli. |
+| **Total token limit** | `limit` + `limitPeriod` (daily/weekly/monthly/lifetime). Usage dihitung per window; kalau lewat → 429 `quota_exceeded`. |
+| **Public check-usage** | Halaman `https://9router.afandiaziz.my.id/check-usage` — siapa saja bisa cek sisa kuota + pemakaian lewat input key (tanpa login). |
+| **/v1/models tersaring** | Request `GET /v1/models` pakai quota key hanya menampilkan model yang diizinkan (id = alias bila ada). |
+| **Accounting terpisah** | Usage quota tercatat di tabel `quotaUsage` (per key per window), terpisah dari usage API key utama. |
+
+### Implementasi (16 komit, 23 file baru)
+
+| Fork | Komit | Isi |
+|------|-------|-----|
+| **fork8** | `b9e788639` | docs(spec): quota sharing design |
+| | `96c4877cc` | docs(plan): quota sharing implementation plan |
+| | `1ff511e04` | feat(db): skema v2 — tabel `quotaKeys` + `quotaUsage`, fix SQL keyword `limit` |
+| | `f32fe1b7e` | feat(db): quota window helper (daily/weekly/monthly/lifetime) |
+| | `639a38c3d` | feat(db): quota keys repo (CRUD, progress, increment usage) |
+| | `78e9ef0bb` | feat(chat): enforce quota key + resolve alias di `handleChat` |
+| | `f72a5abe6` | feat(usage): increment kuota saat `sk-danton-*` dipakai |
+| | `2053f01f4` | feat(public): page `/check-usage` + API `/api/public/check-usage` |
+| | `3df4b09e8` | feat(api): CRUD `/api/quota-keys` + `/available-models` |
+| | `5a27e0904` | feat(ui): halaman dashboard quota-sharing |
+| | `f1fe6817c` | feat(models): `/v1/models` tersaring untuk quota key |
+| **fork9** | `d85a33ae6` | feat(quota): polish UX — prefix diubah `qsk-` → `sk-danton-`, chip model + copy, defensive guard |
+| **fork10** | `8fb149a3d` | fix(quota): quota key bisa dipakai saat `requireApiKey=true` (validasi `isValidApiKey`) + polish |
+| **fork11** | `3fc23b245` | fix(quota): bug routing alias + format `keyPrefix` (`sk-danton-xxxx…`) + `baseUrl` proxy-aware |
+| **fork12** | `061f0e5e4` | fix(quota): `modelStr` `const` → `let` — alias gagal karena `TypeError: Assignment to constant variable` (HTTP 500) |
+
+### Timeline Deploy & CI
+
+| Fork | Tag | CI Run | Keterangan |
+|------|-----|--------|-----------|
+| 8 | `v0.5.50-fork8` | — | Fitur lengkap pertama |
+| 9 | `v0.5.50-fork9` | — | Polish UX + rename prefix |
+| 10 | `v0.5.50-fork10` | — | Fix dukungan `requireApiKey` |
+| 11 | `v0.5.50-fork11` | 31403074365 | Fix routing alias + keyPrefix + baseUrl |
+| 12 | `v0.5.50-fork12` | 31404005621 | Fix `modelStr` const→let (alias beneran jalan) |
+
+### Bug #1 (fork11): keyPrefix format
+
+Kueri `keyPrefix` awalnya `sk-dant` (8 karakter slice). Diminta format `sk-danton-xxxx…` — prefix + **4 karakter awal setelah prefix** + titik-titik. Diperbaiki di fork11 (3 file: `check-usage`, `quota-keys`, `quota-keys/[id]`).
+
+### Bug #2 (fork11): baseUrl salah di /check-usage
+
+`new URL(request.url).origin` memberi `http://localhost`. Diperbaiki memakai header `x-forwarded-proto` / `x-forwarded-host` (proxy-aware; nginx + custom-server mempertahankan Host).
+
+### Bug #3 (fork12): alias routing 500 — root cause
+
+Request alias (`composer-2.5`) balas **HTTP 500 `TypeError: Assignment to constant variable`** di semua request `sk-danton-*`. Di `src/sse/handlers/chat.js`, `modelStr` dideklarasikan `const` di bawah `enforceQuotaKey`, lalu kode fix reassign `modelStr = result.resolvedModel` — **assign ke `const` = crash**.
+
+```javascript
+// ❌ fork11 (500 on every quota-key request)
+const modelStr = body.model;
+...
+modelStr = result.resolvedModel;   // TypeError: Assignment to constant variable
+
+// ✅ fork12
+let modelStr = body.model;
+...
+modelStr = result.resolvedModel;   // works
+```
+
+**Verifikasi produksi (fork12):**
+
+| Request model | Hasil |
+|---------------|-------|
+| `composer-2.5` (alias → `gcli/grok-composer-2.5`) | ✅ 200 chat completion |
+| `composer-2.5-fast` (alias) | ✅ 200 |
+| `gcli/grok-4.5` (tanpa alias) | ✅ 200 |
+| `grok-3` (tidak di allowlist) | ✅ 403 "Model not allowed for this quota key" |
+
+### Catatan
+
+- Prefix quota key: **`sk-danton-`** (di fork9 dari `qsk-`) — dikunci agar konsisten dengan nama instance (`9router`).
+- SQL reserved keyword `limit` di-quote (`"limit"`) — fix di `buildCreateTableSql` + repo.
+- Test unit quota: 49 lulus (`tests/unit/quota-*.test.js`), nol regresi terhadap baseline.
+- Semua fitur tersaring hanya untuk key `sk-danton-*`; API key utama & mode lokal tidak terpengaruh.
+
+---
+
 ## PERUBAHAN MILIK FORK (Bukan dari Upstream)
+
 
 ### Commit Custom #1: CI Configuration
 
@@ -306,15 +395,27 @@ Rollback: Edit `docker-compose.yml`, ubah image ke versi sebelumnya, lalu restar
 | Critical Revert | 1 | PR #664 undo |
 | Documentation | 1 | Changelog maintenance |
 
+### Fitur Baru Milik Fork: Quota Sharing (16 komit, forks 8–12)
+
+| Type | Count |
+|------|-------|
+| Schema + repo DB (quotaKeys/quotaUsage) | 3 |
+| Enforcement + accounting (chat/api) | 4 |
+| UI + API (dashboard, check-usage, models) | 7 |
+| Fix bug produksi (alias routing, keyPrefix, baseUrl) | 3 |
+| Docs (design + plan) | 2 |
+| **Total** | **16 komit** (fork7..HEAD) · **23 file baru** (13 source + 8 test + 2 docs) |
+
 ### Production Impact
 
 - **Active Connections**: 3594 (3558 active)
 - **Encrypted Secrets**: 348 API keys @ AES-256-GCM
 - **Features Live**: Empty stream detection, bulk actions, token tracking
-- **Tests Passing**: 88 failed / 1810 passed (baseline maintained)
+- **Quota Sharing**: ✅ Live — key `sk-danton-*`, model alias, token limit per window, public `/check-usage`
+- **Tests Passing**: 88 failed / 1810 passed (baseline maintained) + 49 quota tests lulus
 
 ---
 
-*File updated: 2026-08-10 17:50 WITA*
+*File updated: 2026-08-10 WITA*
 *Last verified: Production running stably with all fixes applied*
 *Export directory: ~/9router-export/*
