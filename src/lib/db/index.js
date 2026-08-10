@@ -68,6 +68,13 @@ export {
   saveRequestDetail, getRequestDetails, getRequestDetailById, getDistinctProviders,
 } from "./repos/requestDetailsRepo.js";
 
+// Quota keys
+export {
+  generateQuotaKey, createQuotaKey, getQuotaKeys, getQuotaKeyById,
+  getQuotaKeyByFullKey, updateQuotaKey, toggleQuotaKey, deleteQuotaKey,
+  getQuotaUsageForWindow, incrementQuotaUsage, getQuotaKeyProgress,
+} from "./repos/quotaKeysRepo.js";
+
 // Export/import full DB
 export async function exportDb() {
   const db = await getAdapter();

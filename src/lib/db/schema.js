@@ -158,7 +158,7 @@ export const TABLES = {
       key: "TEXT UNIQUE NOT NULL",
       name: "TEXT",
       isActive: "INTEGER DEFAULT 1",
-      limit: "INTEGER",
+      "limit": "INTEGER",
       limitPeriod: "TEXT",
       allowedModels: "TEXT",
       notes: "TEXT",
@@ -181,8 +181,13 @@ export const TABLES = {
   },
 };
 
+const SQL_RESERVED = new Set(["limit", "key", "order", "group", "table", "where", "select", "insert", "update", "delete", "index"]);
+
 export function buildCreateTableSql(name, def) {
-  const cols = Object.entries(def.columns).map(([k, v]) => `${k} ${v}`);
+  const cols = Object.entries(def.columns).map(([k, v]) => {
+    const colName = SQL_RESERVED.has(k.toLowerCase()) ? `"${k}"` : k;
+    return `${colName} ${v}`;
+  });
   if (def.primaryKey) cols.push(def.primaryKey);
   return `CREATE TABLE IF NOT EXISTS ${name} (${cols.join(", ")})`;
 }

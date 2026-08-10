@@ -19,4 +19,7 @@ export {
   getPricing, getPricingForModel, updatePricing, resetPricing, resetAllPricing,
   getDailyConnectionUsage,
   exportDb, importDb,
+  generateQuotaKey, createQuotaKey, getQuotaKeys, getQuotaKeyById,
+  getQuotaKeyByFullKey, updateQuotaKey, toggleQuotaKey, deleteQuotaKey,
+  getQuotaUsageForWindow, incrementQuotaUsage, getQuotaKeyProgress,
 } from "@/lib/db/index.js";
