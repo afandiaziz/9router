@@ -211,4 +211,18 @@ describe("provider connections pagination — page.js structural guard", () => {
     expect(source).toMatch(/pagedConnectionIds/);
     expect(source).not.toMatch(/setSelectedConnectionIds\(connections\.map/);
   });
+
+  // Regression guard for the fork3 outage: the ?provider= interpolation shipped
+  // inside DOUBLE quotes, so the template literal was never evaluated. The
+  // request went out as ?provider=%24%7BencodeURIComponent(providerId)%7D, the
+  // SQL WHERE matched nothing, and every provider page rendered zero
+  // connections — while the rows sat untouched in the database.
+  it("interpolates ?provider= with a template literal, not a plain string", () => {
+    expect(source).not.toMatch(/["']\/api\/providers\?provider=\$\{/);
+    expect(source).toMatch(/`\/api\/providers\?provider=\$\{encodeURIComponent\(providerId\)\}`/);
+  });
+
+  it("still filters connections by provider on the client (defense in depth)", () => {
+    expect(source).toMatch(/\.filter\(\(c\) => c\.provider === providerId\)/);
+  });
 });

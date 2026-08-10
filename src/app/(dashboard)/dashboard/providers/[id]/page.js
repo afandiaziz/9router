@@ -296,7 +296,7 @@ export default function ProviderDetailPage() {
   const fetchConnections = useCallback(async () => {
     try {
       const [connectionsRes, nodesRes, proxyPoolsRes, settingsRes] = await Promise.all([
-        fetch("/api/providers?provider=${encodeURIComponent(providerId)}", { cache: "no-store" }),
+        fetch(`/api/providers?provider=${encodeURIComponent(providerId)}`, { cache: "no-store" }),
         fetch("/api/provider-nodes", { cache: "no-store" }),
         fetch("/api/proxy-pools?isActive=true", { cache: "no-store" }),
         fetch("/api/settings", { cache: "no-store" }),
@@ -306,7 +306,10 @@ export default function ProviderDetailPage() {
       const proxyPoolsData = await proxyPoolsRes.json();
       const settingsData = settingsRes.ok ? await settingsRes.json() : {};
       if (connectionsRes.ok) {
-        setConnections(connectionsData.connections || []);
+        // Filter client-side too: the server filter is an optimization, not a
+        // guarantee. An older worker (or a malformed ?provider=) returns the
+        // full list, and this page must never render another provider's rows.
+        setConnections((connectionsData.connections || []).filter((c) => c.provider === providerId));
       }
       if (proxyPoolsRes.ok) {
         setProxyPools(proxyPoolsData.proxyPools || []);
