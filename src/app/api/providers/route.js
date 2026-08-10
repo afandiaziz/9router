@@ -50,8 +50,8 @@ async function normalizeProxyPoolId(proxyPoolId) {
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const provider = searchParams.get("provider");
-    const connections = await getProviderConnections(provider ? { provider } : {});
+    // Provider filtering moved to client-side for reliability
+    const connections = await getProviderConnections(); // Return all, client filters
 
     // Build nodeNameMap for compatible providers (id → name)
     let nodeNameMap = {};
