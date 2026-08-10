@@ -264,6 +264,24 @@ export async function getActiveRequests() {
   return { activeRequests, recentRequests, errorProvider };
 }
 
+/**
+ * Increment quota usage for qsk-* keys on successful request.
+ * Returns true if increment happened, false otherwise.
+ */
+export async function applyQuotaIncrement(apiKey, tokens, timestamp = new Date().toISOString(), deps = null) {
+  if (!apiKey || !String(apiKey).startsWith("qsk-")) return false;
+  const { getQuotaKeyByFullKey, incrementQuotaUsage } = deps || {
+    getQuotaKeyByFullKey: (await import("./quotaKeysRepo.js")).getQuotaKeyByFullKey,
+    incrementQuotaUsage: (await import("./quotaKeysRepo.js")).incrementQuotaUsage,
+  };
+  const key = await getQuotaKeyByFullKey(apiKey);
+  if (!key) return false;
+  const { getWindowKey } = await import("./quotaWindow.js");
+  const { periodKey, windowStart, resetAt } = getWindowKey(key.limitPeriod);
+  await incrementQuotaUsage(key.id, key.limitPeriod, periodKey, windowStart, resetAt, Number(tokens) || 0);
+  return true;
+}
+
 export async function saveRequestUsage(entry) {
   try {
     const db = await getAdapter();
@@ -333,6 +351,7 @@ export async function saveRequestUsage(entry) {
     if (inserted) {
       pushToRing(entry);
       scheduleStatsEvent("update", 250);
+      await applyQuotaIncrement(entry.apiKey, promptTokens + completionTokens, entry.timestamp);
     }
   } catch (e) {
     console.error("Failed to save usage stats:", e);
