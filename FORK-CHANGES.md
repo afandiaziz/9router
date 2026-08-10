@@ -111,6 +111,37 @@ mencatatnya `success`. Ini konsisten dengan anomali di instance ini — 24.762 r
 | `2cdf0143` | CI: publish hanya ke GHCR (fork tak punya secret Docker Hub), amd64 saja, tag `latest` tanpa syarat |
 | `9ed5be64` | Revert PR #664 — lihat catatan di bawah |
 | (di `tier3`) | `fix(test)`: guard struktural #2998 memakai path cwd-relative → gagal karena suite jalan dari `tests/`. Di-anchor ke `import.meta.url`. |
+| `4daadad6` | `fix(providers)`: perbaiki template literal #2998 yang tidak dievaluasi — lihat catatan di bawah |
+
+### Insiden fork3 — daftar koneksi kosong (BACA INI)
+
+Tag `v0.5.50-fork3` menyebabkan **seluruh kredensial provider tampak hilang** di dashboard —
+OAuth, API key, free tier, custom. Menambah koneksi baru pun tampak tidak tersimpan.
+
+**Tidak ada data yang hilang.** 3502 baris `providerConnections` utuh sepanjang insiden, termasuk
+koneksi yang ditambahkan selagi fork3 berjalan. Yang rusak hanya kuerinya.
+
+Penyebabnya satu karakter di [#2998](https://github.com/decolua/9router/pull/2998):
+
+```js
+fetch("/api/providers?provider=${encodeURIComponent(providerId)}")   // kutip ganda!
+```
+
+Template literal di dalam kutip ganda tidak pernah dievaluasi. Request terkirim sebagai
+`?provider=%24%7BencodeURIComponent(providerId)%7D`; `WHERE provider = '<string mentah itu>'`
+tidak cocok dengan apa pun, jadi mengembalikan nol baris. Commit yang sama juga menghapus filter
+sisi klien `filter(c => c.provider === providerId)` karena dianggap sudah ditangani server —
+sehingga tidak ada jaring pengaman.
+
+Rollback ke fork2 "memulihkan" data justru karena barisnya memang tidak pernah pergi.
+
+Perbaikan (`4daadad6`, tag `v0.5.50-fork4`): backtick pada URL, kembalikan filter klien sebagai
+defense in depth, plus dua guard struktural. Guard diuji terbalik — kutip ganda dikembalikan,
+test gagal; diperbaiki, test lulus.
+
+**Pelajaran:** test suite #2998 punya 27 test tapi tak satu pun memverifikasi URL yang benar-benar
+dikirim. Guard struktural yang hanya mencocokkan nama variabel tidak menangkap kesalahan sintaks
+yang tetap valid secara JavaScript.
 
 ### Kenapa PR #664 di-revert
 
