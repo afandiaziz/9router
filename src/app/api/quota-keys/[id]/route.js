@@ -12,7 +12,7 @@ export async function GET(request, { params }) {
     }
     const progress = await getQuotaKeyProgress(id);
     const { key: fullKey, ...rest } = key;
-    return NextResponse.json({ ...rest, keyPrefix: fullKey.startsWith("sk-danton-") ? "sk-danton-" + fullKey.slice("sk-danton-".length, "sk-danton-".length + 4) : fullKey.slice(0, 8), progress });
+    return NextResponse.json({ ...rest, keyPrefix: fullKey.startsWith("sk-danton-") ? "sk-danton-" + fullKey.slice("sk-danton-".length, "sk-danton-".length + 4) + "…" : fullKey.slice(0, 8) + "…", progress });
   } catch (error) {
     console.error("Error fetching quota key:", error);
     return NextResponse.json({ error: "Failed to fetch quota key" }, { status: 500 });

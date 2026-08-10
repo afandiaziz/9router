@@ -85,7 +85,10 @@ export async function handleChat(request, clientRawRequest = null) {
       }
       return result.response;
     }
-    if (result.resolvedModel) body.model = result.resolvedModel;
+    if (result.resolvedModel) {
+      body.model = result.resolvedModel;
+      modelStr = result.resolvedModel;
+    }
     // remember for accounting in saveRequestUsage
     const { getQuotaKeyByFullKey } = await import("@/lib/db/repos/quotaKeysRepo.js");
     const quotaKeyRow = await getQuotaKeyByFullKey(apiKey);

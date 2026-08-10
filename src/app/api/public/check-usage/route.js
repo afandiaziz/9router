@@ -18,11 +18,12 @@ export async function POST(request) {
     const progress = await getQuotaKeyProgress(quotaKey.id);
     const db = await getAdapter();
     const report = await buildUsageReport({ ...quotaKey, key }, progress, db);
-    // Base URL for how-to-use examples — derived from request host.
-    const url = new URL(request.url);
-    const baseUrl = `${url.protocol}//${url.host}`;
-    // keyPrefix: sk-danton- + 4 chars after prefix
-    const keyPrefix = key.startsWith("sk-danton-") ? "sk-danton-" + key.slice("sk-danton-".length, "sk-danton-".length + 4) : key.slice(0, 8);
+    // Base URL for how-to-use examples — prefer forwarded headers (reverse-proxy aware).
+    const proto = request.headers.get("x-forwarded-proto") || "http";
+    const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+    const baseUrl = host ? `${proto}://${host}` : new URL(request.url).origin;
+    // keyPrefix: sk-danton- + 4 chars after prefix + ellipsis
+    const keyPrefix = key.startsWith("sk-danton-") ? "sk-danton-" + key.slice("sk-danton-".length, "sk-danton-".length + 4) + "…" : key.slice(0, 8) + "…";
     return NextResponse.json({ keyValid: true, keyPrefix, baseUrl, ...report });
   } catch (error) {
     console.error("check-usage error:", error);
