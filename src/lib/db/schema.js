@@ -3,7 +3,7 @@
 // pre-change safety backup in migrate.js: when the stored version is lower,
 // one lightweight DB backup is taken before applying schema changes. Forgetting
 // to bump only skips that backup — it does NOT break the additive auto-sync.
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const PRAGMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -151,6 +151,33 @@ export const TABLES = {
       "CREATE INDEX IF NOT EXISTS idx_rd_model ON requestDetails(model)",
       "CREATE INDEX IF NOT EXISTS idx_rd_conn ON requestDetails(connectionId)",
     ],
+  },
+  quotaKeys: {
+    columns: {
+      id: "TEXT PRIMARY KEY",
+      key: "TEXT UNIQUE NOT NULL",
+      name: "TEXT",
+      isActive: "INTEGER DEFAULT 1",
+      limit: "INTEGER",
+      limitPeriod: "TEXT",
+      allowedModels: "TEXT",
+      notes: "TEXT",
+      createdAt: "TEXT NOT NULL",
+      updatedAt: "TEXT NOT NULL",
+    },
+    indexes: ["CREATE INDEX IF NOT EXISTS idx_qk_key ON quotaKeys(key)"],
+  },
+  quotaUsage: {
+    columns: {
+      keyId: "TEXT NOT NULL",
+      period: "TEXT NOT NULL",
+      periodKey: "TEXT NOT NULL",
+      tokensUsed: "INTEGER DEFAULT 0",
+      windowStart: "TEXT NOT NULL",
+      resetAt: "TEXT NOT NULL",
+    },
+    primaryKey: "PRIMARY KEY (keyId, period, periodKey)",
+    indexes: ["CREATE INDEX IF NOT EXISTS idx_qu_kp ON quotaUsage(keyId, period)"],
   },
 };
 
