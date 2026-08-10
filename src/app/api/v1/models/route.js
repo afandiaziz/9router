@@ -6,7 +6,7 @@ import {
   isOpenAICompatibleProvider,
   OPENAI_COMPATIBLE_PREFIX,
 } from "@/shared/constants/providers";
-import { getProviderConnections, getCombos, getCustomModels, getModelAliases, getSettings } from "@/lib/localDb";
+import { getProviderConnections, getCombos, getCustomModels, getModelAliases, getSettings, getQuotaKeyByFullKey } from "@/lib/localDb";
 import { extractApiKey, isValidApiKey } from "@/sse/services/auth";
 import { getDisabledModels } from "@/lib/disabledModelsDb";
 import { resolveKiroModels } from "open-sse/services/kiroModels.js";
@@ -598,6 +598,18 @@ export async function buildModelsList(kindFilter, options = {}) {
 }
 
 /**
+ * Filter models for quota-sharing keys: expose only allowed models with alias as id.
+ * @param {Array} allModels - Full model list from buildModelsList
+ * @param {Array} allowedModels - [{ model, alias }] from quota key
+ * @returns {Array} Filtered models
+ */
+export function filterModelsForQuotaKey(allModels, allowedModels) {
+  if (!Array.isArray(allowedModels) || allowedModels.length === 0) return allModels;
+  const allowedSet = new Set(allowedModels.map((e) => e.alias || e.model));
+  return allModels.filter((m) => allowedSet.has(m.id));
+}
+
+/**
  * Handle CORS preflight
  */
 export async function OPTIONS() {
@@ -631,6 +643,18 @@ export async function GET(request) {
 
     // Detect cross-instance recursive /models fetch (another 9router fetching our /models)
     const skipDynamicFetch = request?.headers?.get(INTERNAL_MODELS_FETCH_HEADER) === "1";
+
+    // Quota-sharing keys (qsk-*): filter models by allowedModels with alias mapping
+    const apiKey = extractApiKey(request);
+    if (apiKey?.startsWith("qsk-")) {
+      const quotaKey = await getQuotaKeyByFullKey(apiKey);
+      if (!quotaKey || !quotaKey.isActive) {
+        return Response.json({ error: { message: "Invalid or inactive quota key" } }, { status: 401, headers: { "Access-Control-Allow-Origin": "*" } });
+      }
+      const filtered = filterModelsForQuotaKey(await buildModelsList([LLM_KIND], { skipDynamicFetch }), quotaKey.allowedModels);
+      return Response.json({ object: "list", data: filtered }, { headers: { "Access-Control-Allow-Origin": "*" } });
+    }
+
     const data = await buildModelsList([LLM_KIND], { skipDynamicFetch });
     return Response.json({ object: "list", data }, {
       headers: { "Access-Control-Allow-Origin": "*" },
