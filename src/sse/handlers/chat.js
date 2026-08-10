@@ -18,6 +18,7 @@ import { handleComboChat, handleFusionChat, detectRequiredCapabilities } from "o
 import { augmentModelsWithCapacityAdapter, withCapacityAdapterStripping, getActiveAdapterStrategy } from "open-sse/services/capacityAdapter.js";
 import { handleBypassRequest } from "open-sse/utils/bypassHandler.js";
 import { HTTP_STATUS } from "open-sse/config/runtimeConfig.js";
+import { enforceQuotaKey } from "@/lib/quotaEnforcement.js";
 import { detectFormatByEndpoint } from "open-sse/translator/formats.js";
 import * as log from "../utils/logger.js";
 import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
@@ -71,6 +72,26 @@ export async function handleChat(request, clientRawRequest = null) {
     if (!valid) {
       log.warn("AUTH", "Invalid API key (requireApiKey=true)");
       return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Invalid API key");
+    }
+  }
+
+  // Quota-sharing keys (qsk-*): enforce model allowlist + token quota, resolve alias.
+  if (apiKey?.startsWith("qsk-")) {
+    const result = await enforceQuotaKey(apiKey, body, {});
+    if (!result.allowed) {
+      const headers = result.response?.headers;
+      if (result.resetsAt && headers) {
+        headers.set("Retry-After", String(result.retryAfterSec ?? 1));
+      }
+      return result.response;
+    }
+    if (result.resolvedModel) body.model = result.resolvedModel;
+    // remember for accounting in saveRequestUsage
+    const { getQuotaKeyByFullKey } = await import("@/lib/db/repos/quotaKeysRepo.js");
+    const quotaKeyRow = await getQuotaKeyByFullKey(apiKey);
+    if (quotaKeyRow) {
+      request.context = request.context || {};
+      request.context.quotaKeyId = quotaKeyRow.id;
     }
   }
 
