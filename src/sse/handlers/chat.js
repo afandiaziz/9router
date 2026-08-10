@@ -75,8 +75,8 @@ export async function handleChat(request, clientRawRequest = null) {
     }
   }
 
-  // Quota-sharing keys (qsk-*): enforce model allowlist + token quota, resolve alias.
-  if (apiKey?.startsWith("qsk-")) {
+  // Quota-sharing keys (sk-danton-*): enforce model allowlist + token quota, resolve alias.
+  if (apiKey?.startsWith("sk-danton-")) {
     const result = await enforceQuotaKey(apiKey, body, {});
     if (!result.allowed) {
       const headers = result.response?.headers;

@@ -20,17 +20,17 @@ describe("applyQuotaIncrement", () => {
     expect(await applyQuotaIncrement(undefined, 100)).toBe(false);
   });
 
-  it("increments for qsk- key on current window", async () => {
+  it("increments for quota key on current window", async () => {
     const mockGetQuotaKeyByFullKey = vi.fn().mockResolvedValue({ id: "9", limitPeriod: "monthly" });
     const mockIncrementQuotaUsage = vi.fn().mockResolvedValue();
 
-    const result = await applyQuotaIncrement("qsk-foo", 100, "2026-08-10T00:00:00.000Z", {
+    const result = await applyQuotaIncrement("sk-danton-foo", 100, "2026-08-10T00:00:00.000Z", {
       getQuotaKeyByFullKey: mockGetQuotaKeyByFullKey,
       incrementQuotaUsage: mockIncrementQuotaUsage,
     });
 
     expect(result).toBe(true);
-    expect(mockGetQuotaKeyByFullKey).toHaveBeenCalledWith("qsk-foo");
+    expect(mockGetQuotaKeyByFullKey).toHaveBeenCalledWith("sk-danton-foo");
     expect(mockIncrementQuotaUsage).toHaveBeenCalledWith("9", "monthly", expect.any(String), expect.any(String), expect.any(String), 100);
   });
 
@@ -38,7 +38,7 @@ describe("applyQuotaIncrement", () => {
     const mockGetQuotaKeyByFullKey = vi.fn().mockResolvedValue(null);
     const mockIncrementQuotaUsage = vi.fn().mockResolvedValue();
 
-    const result = await applyQuotaIncrement("qsk-unknown", 100, "2026-08-10T00:00:00.000Z", {
+    const result = await applyQuotaIncrement("sk-danton-unknown", 100, "2026-08-10T00:00:00.000Z", {
       getQuotaKeyByFullKey: mockGetQuotaKeyByFullKey,
       incrementQuotaUsage: mockIncrementQuotaUsage,
     });

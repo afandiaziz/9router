@@ -26,11 +26,11 @@ afterAll(() => {
 describe("quotaKeysRepo", () => {
   let key;
 
-  it("generateQuotaKey has qsk- prefix + 24 hex", async () => {
+  it("generateQuotaKey has sk-danton- prefix + 24 hex", async () => {
     const { generateQuotaKey } = await import("@/lib/db/repos/quotaKeysRepo.js");
     const k = generateQuotaKey();
-    expect(k.startsWith("qsk-")).toBe(true);
-    expect(k.length).toBe(28); // qsk- + 24
+    expect(k.startsWith("sk-danton-")).toBe(true);
+    expect(k.length).toBe(10 + 24); // sk-danton- + 24 hex
   });
 
   it("rejects invalid limitPeriod", async () => {

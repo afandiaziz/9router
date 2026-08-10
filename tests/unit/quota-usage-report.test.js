@@ -23,7 +23,7 @@ describe("buildUsageReport", () => {
       ],
     };
     const progress = { tokensUsed: 105, limit: 200, percent: 53, resetsAt: "2026-09-01T00:00:00.000Z", allowedModels: [{ model: "gcli/grok-4.5", alias: "xai/grok-4.5" }], isActive: true };
-    const report = await buildUsageReport({ key: "qsk-1", name: "f", limitPeriod: "monthly", limit: 200 }, progress, fakeDb);
+    const report = await buildUsageReport({ key: "sk-danton-1", name: "f", limitPeriod: "monthly", limit: 200 }, progress, fakeDb);
     expect(report.totalTokens.prompt).toBe(60);
     expect(report.totalTokens.completion).toBe(45);
     expect(report.totalTokens.cachedRead).toBe(3);

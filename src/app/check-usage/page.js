@@ -2,6 +2,51 @@
 
 import { useState } from "react";
 
+function CopyButton({ text, label }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async (e) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded transition"
+      title={`Copy ${label || text}`}
+    >
+      {copied ? "✓ Copied" : "Copy"}
+    </button>
+  );
+}
+
+function Chip({ text, secondary }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async (e) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+  return (
+    <span
+      onClick={copy}
+      title={`Click to copy: ${text}`}
+      className="px-2 py-1 bg-gray-800 rounded text-xs font-mono cursor-pointer hover:bg-gray-700 border border-transparent hover:border-blue-500 transition select-all"
+    >
+      {text}
+      {copied && <span className="text-green-400 ml-1">✓</span>}
+      {secondary && <span className="text-gray-500 ml-1">({secondary})</span>}
+    </span>
+  );
+}
+
 export default function CheckUsagePage() {
   const [key, setKey] = useState("");
   const [result, setResult] = useState(null);
@@ -32,6 +77,8 @@ export default function CheckUsagePage() {
     }
   };
 
+  const baseUrl = result?.baseUrl || "";
+
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-2xl">
@@ -44,7 +91,7 @@ export default function CheckUsagePage() {
                 type="text"
                 value={key}
                 onChange={(e) => setKey(e.target.value)}
-                placeholder="qsk-xxxxxxxxxxxxxxxx"
+                placeholder="sk-danton-xxxxxxxxxxxxxxxx"
                 className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 font-mono"
                 disabled={loading}
               />
@@ -71,6 +118,18 @@ export default function CheckUsagePage() {
                 </span>
               </div>
 
+              {/* Base URL */}
+              {baseUrl && (
+                <div className="bg-gray-800 p-3 rounded flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-400 mb-1">Base URL</p>
+                    <p className="text-sm font-mono truncate">{baseUrl}/v1</p>
+                  </div>
+                  <CopyButton text={`${baseUrl}/v1`} label="Base URL" />
+                </div>
+              )}
+
+              {/* Token usage */}
               <div>
                 <div className="flex justify-between text-sm mb-1">
                   <span>Token Usage ({result.limitPeriod})</span>
@@ -124,21 +183,70 @@ export default function CheckUsagePage() {
                 </div>
               )}
 
-              {result.allowedModels?.length > 0 && (
+              {result.allowedModels?.length > 0 ? (
                 <div>
                   <h3 className="text-sm font-medium text-gray-400 mb-2">Allowed Models</h3>
+                  <p className="text-xs text-gray-500 mb-2">Click a model to copy its name.</p>
                   <div className="flex flex-wrap gap-2">
                     {result.allowedModels.map((m, i) => (
-                      <span key={i} className="px-2 py-1 bg-gray-800 rounded text-xs font-mono">
-                        {m.alias || m.model}
-                      </span>
+                      <Chip key={i} text={m.alias || m.model} secondary={m.alias !== m.model ? m.model : null} />
                     ))}
                   </div>
                 </div>
+              ) : (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-1">Allowed Models</h3>
+                  <p className="text-sm text-gray-500">All models allowed</p>
+                </div>
               )}
 
-              {result.allowedModels?.length === 0 && (
-                <p className="text-sm text-gray-500">All models allowed</p>
+              {/* How to use */}
+              {baseUrl && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-2">How to Use</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">OpenAI-compatible chat (curl)</p>
+                      <pre className="bg-gray-950 p-3 rounded text-xs overflow-x-auto">
+{`curl ${baseUrl}/v1/chat/completions \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${result.keyPrefix}" \\
+  -d '{
+    "model": "${result.allowedModels?.[0]?.alias || "grok/grok-4.5"}",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'`}
+                      </pre>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">JavaScript (fetch)</p>
+                      <pre className="bg-gray-950 p-3 rounded text-xs overflow-x-auto">
+{`const res = await fetch("${baseUrl}/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer ${result.keyPrefix}"
+  },
+  body: JSON.stringify({
+    model: "${result.allowedModels?.[0]?.alias || "grok/grok-4.5"}",
+    messages: [{ role: "user", content: "Hello!" }]
+  })
+});
+const data = await res.json();`}
+                      </pre>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">List available models</p>
+                      <pre className="bg-gray-950 p-3 rounded text-xs overflow-x-auto">
+{`curl ${baseUrl}/v1/models \\
+  -H "Authorization: Bearer ${result.keyPrefix}"`}
+                      </pre>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Use <span className="font-mono">{result.keyPrefix}</span> as your API key. Access models you
+                      are allowed to use under their alias names shown above.
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
 

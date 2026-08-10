@@ -3,7 +3,7 @@ import { errorResponse } from "open-sse/utils/error.js";
 import { getQuotaKeyByFullKey, getQuotaKeyProgress } from "@/lib/db/repos/quotaKeysRepo.js";
 
 /**
- * Enforce quota-sharing key (qsk-*) on incoming chat request.
+ * Enforce quota-sharing key (sk-danton-*) on incoming chat request.
  * Returns { allowed: true, resolvedModel } on success, or
  * { allowed: false, response: Response } on failure.
  */

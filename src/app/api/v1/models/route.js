@@ -644,9 +644,9 @@ export async function GET(request) {
     // Detect cross-instance recursive /models fetch (another 9router fetching our /models)
     const skipDynamicFetch = request?.headers?.get(INTERNAL_MODELS_FETCH_HEADER) === "1";
 
-    // Quota-sharing keys (qsk-*): filter models by allowedModels with alias mapping
+    // Quota-sharing keys (sk-danton-*): filter models by allowedModels with alias mapping
     const apiKey = extractApiKey(request);
-    if (apiKey?.startsWith("qsk-")) {
+    if (apiKey?.startsWith("sk-danton-")) {
       const quotaKey = await getQuotaKeyByFullKey(apiKey);
       if (!quotaKey || !quotaKey.isActive) {
         return Response.json({ error: { message: "Invalid or inactive quota key" } }, { status: 401, headers: { "Access-Control-Allow-Origin": "*" } });

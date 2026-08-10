@@ -5,8 +5,10 @@ import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 import { getWindowKey } from "./quotaWindow.js";
 
+export const QUOTA_KEY_PREFIX = "sk-danton-";
+
 export function generateQuotaKey() {
-  return "qsk-" + randomBytes(12).toString("hex"); // 24 hex
+  return QUOTA_KEY_PREFIX + randomBytes(12).toString("hex"); // QUOTA_KEY_PREFIX + 24 hex
 }
 
 function rowToQuotaKey(row) {

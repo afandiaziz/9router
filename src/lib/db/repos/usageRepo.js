@@ -265,11 +265,11 @@ export async function getActiveRequests() {
 }
 
 /**
- * Increment quota usage for qsk-* keys on successful request.
+ * Increment quota usage for quota keys (sk-danton-*) on successful request.
  * Returns true if increment happened, false otherwise.
  */
 export async function applyQuotaIncrement(apiKey, tokens, timestamp = new Date().toISOString(), deps = null) {
-  if (!apiKey || !String(apiKey).startsWith("qsk-")) return false;
+  if (!apiKey || !String(apiKey).startsWith("sk-danton-")) return false;
   const { getQuotaKeyByFullKey, incrementQuotaUsage } = deps || {
     getQuotaKeyByFullKey: (await import("./quotaKeysRepo.js")).getQuotaKeyByFullKey,
     incrementQuotaUsage: (await import("./quotaKeysRepo.js")).incrementQuotaUsage,

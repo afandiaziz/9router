@@ -133,7 +133,7 @@ function extractApiKey(request) {
 async function hasValidApiKey(request) {
   const apiKey = extractApiKey(request);
   if (!apiKey) return false;
-  if (apiKey.startsWith("qsk-")) {
+  if (apiKey.startsWith("sk-danton-")) {
     const { getQuotaKeyByFullKey } = await import("@/lib/db/repos/quotaKeysRepo.js");
     const key = await getQuotaKeyByFullKey(apiKey);
     return !!key && key.isActive === true;
