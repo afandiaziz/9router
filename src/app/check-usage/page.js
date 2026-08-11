@@ -63,6 +63,7 @@ export default function CheckUsagePage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [howToTab, setHowToTab] = useState("curl");
 
   const fetchUsage = async (apiKey, opts = {}) => {
     const isRefresh = opts.refresh || false;
@@ -224,14 +225,32 @@ export default function CheckUsagePage() {
                 </div>
               )}
 
-              {/* How to use */}
+              {/* How to use — tabbed */}
               {baseUrl && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-400 mb-2">How to Use</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">OpenAI-compatible chat (curl)</p>
-                      <pre className="bg-gray-950 p-3 rounded text-xs overflow-x-auto">
+                  <div className="flex gap-1 mb-3">
+                    {[
+                      { id: "curl", label: "cURL" },
+                      { id: "js", label: "JavaScript" },
+                      { id: "models", label: "Models" },
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setHowToTab(tab.id)}
+                        className={`px-3 py-1.5 text-xs rounded-md font-medium transition ${
+                          howToTab === tab.id
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {howToTab === "curl" && (
+                    <pre className="bg-gray-950 p-3 rounded text-xs overflow-x-auto">
 {`curl ${baseUrl}/v1/chat/completions \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer ${result.keyPrefix}" \\
@@ -239,11 +258,11 @@ export default function CheckUsagePage() {
     "model": "${result.allowedModels?.[0]?.alias || "grok/grok-4.5"}",
     "messages": [{"role": "user", "content": "Hello!"}]
   }'`}
-                      </pre>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">JavaScript (fetch)</p>
-                      <pre className="bg-gray-950 p-3 rounded text-xs overflow-x-auto">
+                    </pre>
+                  )}
+
+                  {howToTab === "js" && (
+                    <pre className="bg-gray-950 p-3 rounded text-xs overflow-x-auto">
 {`const res = await fetch("${baseUrl}/v1/chat/completions", {
   method: "POST",
   headers: {
@@ -256,20 +275,20 @@ export default function CheckUsagePage() {
   })
 });
 const data = await res.json();`}
-                      </pre>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">List available models</p>
-                      <pre className="bg-gray-950 p-3 rounded text-xs overflow-x-auto">
+                    </pre>
+                  )}
+
+                  {howToTab === "models" && (
+                    <pre className="bg-gray-950 p-3 rounded text-xs overflow-x-auto">
 {`curl ${baseUrl}/v1/models \\
   -H "Authorization: Bearer ${result.keyPrefix}"`}
-                      </pre>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Use <span className="font-mono">{result.keyPrefix}</span> as your API key. Access models you
-                      are allowed to use under their alias names shown above.
-                    </p>
-                  </div>
+                    </pre>
+                  )}
+
+                  <p className="text-xs text-gray-500 mt-3">
+                    Use <span className="font-mono">{result.keyPrefix}</span> as your API key. Access models you
+                    are allowed to use under their alias names shown above.
+                  </p>
                 </div>
               )}
             </div>
