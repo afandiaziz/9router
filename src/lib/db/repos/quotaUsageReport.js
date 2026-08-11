@@ -63,6 +63,7 @@ export async function buildUsageReport(apiKeyRow, progress, db) {
     resetsAt: progress.resetAt,
     tokensUsed: progress.tokensUsed,
     percent: progress.percent,
+    totalRequests: rows.length,
     totalTokens: {
       prompt,
       completion,

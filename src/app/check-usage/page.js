@@ -62,17 +62,18 @@ export default function CheckUsagePage() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const fetchUsage = async (apiKey, opts = {}) => {
+    const isRefresh = opts.refresh || false;
+    if (isRefresh) setRefreshing(true);
+    else { setLoading(true); setResult(null); }
     setError("");
-    setResult(null);
     try {
       const res = await fetch("/api/public/check-usage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: key.trim() }),
+        body: JSON.stringify({ key: apiKey.trim() }),
       });
       const data = await res.json();
       if (!res.ok || !data.keyValid) {
@@ -83,9 +84,17 @@ export default function CheckUsagePage() {
     } catch (err) {
       setError("Failed to fetch usage");
     } finally {
-      setLoading(false);
+      if (isRefresh) setRefreshing(false);
+      else setLoading(false);
     }
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await fetchUsage(key);
+  };
+
+  const handleRefresh = () => fetchUsage(key, { refresh: true });
 
   const baseUrl = result?.baseUrl || "";
 
@@ -159,18 +168,23 @@ export default function CheckUsagePage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="bg-gray-800 p-3 rounded">
+                  <p className="text-gray-400">Total Requests</p>
+                  <p className="text-xl font-bold">{(result.totalRequests ?? 0).toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">In current {result.limitPeriod} window</p>
+                </div>
                 <div className="bg-gray-800 p-3 rounded">
                   <p className="text-gray-400">Total Tokens</p>
                   <p className="text-xl font-bold">{((result.totalTokens?.prompt || 0) + (result.totalTokens?.completion || 0)).toLocaleString()}</p>
-                  <p className="text-xs text-gray-500">Input: {result.totalTokens?.prompt?.toLocaleString()} | Output: {result.totalTokens?.completion?.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">In: {result.totalTokens?.prompt?.toLocaleString()} | Out: {result.totalTokens?.completion?.toLocaleString()}</p>
                 </div>
                 <div className="bg-gray-800 p-3 rounded">
                   <p className="text-gray-400">Cached Tokens</p>
                   <p className="text-xl font-bold">{result.totalTokens?.cachedRead?.toLocaleString() || 0}</p>
                   <p className="text-xs text-gray-500">Read: {result.totalTokens?.cachedRead?.toLocaleString()} | Write: {result.totalTokens?.cachedWrite?.toLocaleString()}</p>
                 </div>
-                <div className="bg-gray-800 p-3 rounded col-span-2">
+                <div className="bg-gray-800 p-3 rounded col-span-3">
                   <p className="text-gray-400">Est. Cost</p>
                   <p className="text-xl font-bold">${result.totalTokens?.cost?.toFixed(4) || "0.00"}</p>
                 </div>
@@ -260,12 +274,34 @@ const data = await res.json();`}
               )}
             </div>
 
-            <button
-              onClick={() => { setResult(null); setKey(""); }}
-              className="w-full py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
-            >
-              Check Another Key
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 rounded-lg transition flex items-center justify-center gap-2"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className={refreshing ? "animate-spin" : ""}
+                >
+                  <path d="M23 4v6h-6" />
+                  <path d="M1 20v-6h6" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+                {refreshing ? "Refreshing..." : "Refresh"}
+              </button>
+              <button
+                onClick={() => { setResult(null); setKey(""); }}
+                className="flex-1 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
+              >
+                Check Another Key
+              </button>
+            </div>
           </div>
         )}
       </div>
