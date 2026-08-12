@@ -167,9 +167,19 @@ export default function QuotaSharingClient() {
         <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2 leading-tight">
           Quota Sharing
         </h2>
-        <Button variant="primary" size="sm" icon="add" onClick={openCreate}>
-          New Quota Key
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="open_in_new"
+            onClick={() => window.open("/check-usage", "_blank", "noopener,noreferrer")}
+          >
+            Check Usage
+          </Button>
+          <Button variant="primary" size="sm" icon="add" onClick={openCreate}>
+            New Quota Key
+          </Button>
+        </div>
       </div>
 
       {error && (

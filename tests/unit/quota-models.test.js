@@ -30,16 +30,27 @@ vi.mock("@/sse/services/tokenRefresh", () => ({ updateProviderCredentials: vi.fn
 vi.mock("@/lib/network/connectionProxy", () => ({ resolveConnectionProxyConfig: vi.fn() }));
 
 describe("filterModelsForQuotaKey", () => {
-  it("maps allowed entries to alias id, drops the rest", async () => {
+  it("matches by real model id, rewrites response id to the alias, drops the rest", async () => {
     const { filterModelsForQuotaKey } = await import("@/app/api/v1/models/route.js");
+    // The full catalog carries real provider/model IDs (gcli/grok-4.5), NOT aliases.
     const all = [
-      { id: "xai/grok-4.5", object: "model", owned_by: "xai" },
+      { id: "gcli/grok-4.5", object: "model", owned_by: "gcli" },
       { id: "openai/gpt-4o", object: "model", owned_by: "openai" },
     ];
-    const allowed = [{ model: "gcli/grok-4.5", alias: "xai/grok-4.5" }];
+    const allowed = [{ model: "gcli/grok-4.5", alias: "danton/grok-4.5" }];
     const out = filterModelsForQuotaKey(all, allowed);
     expect(out.length).toBe(1);
-    expect(out[0].id).toBe("xai/grok-4.5");
+    expect(out[0].id).toBe("danton/grok-4.5"); // exposed under the alias
+    expect(out[0].owned_by).toBe("gcli"); // other fields preserved
+  });
+
+  it("falls back to the real model id when no alias is set", async () => {
+    const { filterModelsForQuotaKey } = await import("@/app/api/v1/models/route.js");
+    const all = [{ id: "gcli/grok-4.5", object: "model", owned_by: "gcli" }];
+    const allowed = [{ model: "gcli/grok-4.5" }];
+    const out = filterModelsForQuotaKey(all, allowed);
+    expect(out.length).toBe(1);
+    expect(out[0].id).toBe("gcli/grok-4.5");
   });
 
   it("no allowed models → return all", async () => {

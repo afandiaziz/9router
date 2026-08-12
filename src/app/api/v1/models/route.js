@@ -603,10 +603,20 @@ export async function buildModelsList(kindFilter, options = {}) {
  * @param {Array} allowedModels - [{ model, alias }] from quota key
  * @returns {Array} Filtered models
  */
+/**
+ * Filter models for quota-sharing keys: expose only allowed models, keyed by their
+ * alias so clients use the alias in chat requests (e.g. "danton/grok-4.5").
+ *
+ * allowedModels is [{ model: "gcli/grok-4.5", alias: "danton/grok-4.5" }, ...].
+ * The full model catalog uses real provider/model IDs (e.g. "gcli/grok-4.5").
+ * We match by the real model ID, then rewrite the response id to the alias.
+ */
 export function filterModelsForQuotaKey(allModels, allowedModels) {
   if (!Array.isArray(allowedModels) || allowedModels.length === 0) return allModels;
-  const allowedSet = new Set(allowedModels.map((e) => e.alias || e.model));
-  return allModels.filter((m) => allowedSet.has(m.id));
+  const aliasByModel = new Map(allowedModels.map((e) => [e.model, e.alias || e.model]));
+  return allModels
+    .filter((m) => aliasByModel.has(m.id))
+    .map((m) => ({ ...m, id: aliasByModel.get(m.id) }));
 }
 
 /**
