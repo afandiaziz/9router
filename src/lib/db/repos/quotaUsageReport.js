@@ -16,11 +16,13 @@ export function parseCachedTokens(tokens) {
 export async function buildUsageReport(apiKeyRow, progress, db) {
   const { periodKey, windowStart, resetAt } = getWindowKey(apiKeyRow.limitPeriod);
 
-  // Query usageHistory for this key within current window
+  // Query usageHistory for this key within current window.
+  // A null resetAt means "no upper bound" (lifetime) — comparing against NULL in SQL
+  // yields NULL (never true), which would silently return zero rows.
   const rows = db.all(
     `SELECT model, promptTokens, completionTokens, cost, tokens FROM usageHistory
-     WHERE apiKey = ? AND timestamp >= ? AND timestamp < ?`,
-    [apiKeyRow.key, windowStart, resetAt]
+     WHERE apiKey = ? AND timestamp >= ? AND (? IS NULL OR timestamp < ?)`,
+    [apiKeyRow.key, windowStart, resetAt, resetAt]
   );
 
   // Aggregate totals

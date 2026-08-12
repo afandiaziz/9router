@@ -5,6 +5,11 @@ import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 import { getWindowKey } from "./quotaWindow.js";
 
+// The quotaUsage DB column resetAt is NOT NULL, but lifetime windows logically
+// have no reset. Use this sentinel as the stored value so the constraint is
+// satisfied while the reporting layer continues to surface null.
+const LIFETIME_RESET_SENTINEL = "9999-12-31T23:59:59.999Z";
+
 export const QUOTA_KEY_PREFIX = "sk-danton-";
 
 export function generateQuotaKey() {
@@ -94,12 +99,45 @@ export async function getQuotaUsageForWindow(keyId, period, periodKey) {
 
 export async function incrementQuotaUsage(keyId, period, periodKey, windowStart, resetAt, tokens) {
   const db = await getAdapter();
+  // Lifetime has no reset, but the column is NOT NULL — use the sentinel.
+  const storedResetAt = resetAt ?? LIFETIME_RESET_SENTINEL;
   db.run(
     `INSERT INTO quotaUsage(keyId, period, periodKey, tokensUsed, windowStart, resetAt)
      VALUES(?, ?, ?, ?, ?, ?)
      ON CONFLICT(keyId, period, periodKey) DO UPDATE SET tokensUsed = tokensUsed + excluded.tokensUsed, resetAt = excluded.resetAt`,
-    [keyId, period, periodKey, Number(tokens) || 0, windowStart, resetAt]
+    [keyId, period, periodKey, Number(tokens) || 0, windowStart, storedResetAt]
   );
+}
+
+/**
+ * Usage is bucketed by (keyId, period, periodKey). Changing a key's limitPeriod moves
+ * the lookup to a bucket that has never been written, so previously accumulated tokens
+ * are orphaned and usage silently reads as 0. For "lifetime" — which by definition
+ * counts every token the key ever spent — fold those orphaned buckets into the
+ * lifetime bucket exactly once, then delete them so this cannot double-count on a
+ * later call. Bounded periods (daily/weekly/monthly) intentionally do NOT migrate:
+ * their buckets are time-scoped and rolling them forward would be wrong.
+ */
+function migrateOrphanedUsageToLifetime(db, keyId) {
+  db.transaction(() => {
+    const orphans = db.all(
+      `SELECT period, periodKey, tokensUsed FROM quotaUsage WHERE keyId = ? AND period != 'lifetime'`,
+      [keyId]
+    );
+    if (orphans.length === 0) return;
+
+    const total = orphans.reduce((sum, r) => sum + (Number(r.tokensUsed) || 0), 0);
+    if (total > 0) {
+      const { windowStart } = getWindowKey("lifetime");
+      db.run(
+        `INSERT INTO quotaUsage(keyId, period, periodKey, tokensUsed, windowStart, resetAt)
+         VALUES(?, ?, ?, ?, ?, ?)
+         ON CONFLICT(keyId, period, periodKey) DO UPDATE SET tokensUsed = tokensUsed + excluded.tokensUsed`,
+        [keyId, "lifetime", "lifetime", total, windowStart, LIFETIME_RESET_SENTINEL]
+      );
+    }
+    db.run(`DELETE FROM quotaUsage WHERE keyId = ? AND period != 'lifetime'`, [keyId]);
+  });
 }
 
 export async function getQuotaKeyProgress(keyId) {
@@ -107,6 +145,7 @@ export async function getQuotaKeyProgress(keyId) {
   const keyRow = db.get(`SELECT * FROM quotaKeys WHERE id = ?`, [keyId]);
   if (!keyRow) return null;
   const key = rowToQuotaKey(keyRow);
+  if (key.limitPeriod === "lifetime") migrateOrphanedUsageToLifetime(db, keyId);
   const { periodKey, windowStart, resetAt } = getWindowKey(key.limitPeriod);
   const usage = await getQuotaUsageForWindow(keyId, key.limitPeriod, periodKey);
   const tokensUsed = usage.tokensUsed;

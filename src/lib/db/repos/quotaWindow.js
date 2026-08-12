@@ -1,5 +1,6 @@
 // src/lib/db/repos/quotaWindow.js
 const ISO = (d) => d.toISOString();
+const EPOCH = "1970-01-01T00:00:00.000Z";
 
 export function getWindowKey(limitPeriod, now = new Date()) {
   const d = now instanceof Date ? now : new Date(now);
@@ -30,7 +31,10 @@ export function getWindowKey(limitPeriod, now = new Date()) {
       return { periodKey, windowStart: ISO(start), resetAt: ISO(end) };
     }
     case "lifetime": {
-      return { periodKey: "lifetime", windowStart: ISO(d), resetAt: null };
+      // Lifetime spans all recorded history: windowStart must be the epoch, not `now`,
+      // or every past request falls outside the window. resetAt stays null (never resets);
+      // consumers must treat a null resetAt as "no upper bound".
+      return { periodKey: "lifetime", windowStart: EPOCH, resetAt: null };
     }
     default:
       throw new Error(`Unknown limitPeriod: ${limitPeriod}`);

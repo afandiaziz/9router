@@ -89,13 +89,8 @@ export async function handleChat(request, clientRawRequest = null) {
       body.model = result.resolvedModel;
       modelStr = result.resolvedModel;
     }
-    // remember for accounting in saveRequestUsage
-    const { getQuotaKeyByFullKey } = await import("@/lib/db/repos/quotaKeysRepo.js");
-    const quotaKeyRow = await getQuotaKeyByFullKey(apiKey);
-    if (quotaKeyRow) {
-      request.context = request.context || {};
-      request.context.quotaKeyId = quotaKeyRow.id;
-    }
+    // Accounting happens in saveRequestUsage, which resolves the quota key from
+    // entry.apiKey itself (see applyQuotaIncrement) — no extra lookup needed here.
   }
 
   if (!modelStr) {
