@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getAdapter } from "../driver.js";
 import { decryptSecretJson, encryptSecretJson } from "../helpers/secretCol.js";
+import { getConnectionErrorTag } from "../../../shared/utils/connectionErrorTag.js";
 
 const OPTIONAL_FIELDS = [
   "displayName", "email", "globalPriority", "defaultModel",
@@ -258,4 +259,42 @@ export async function cleanupProviderConnections() {
     }
   });
   return cleaned;
+}
+
+const HEALTHY_STATUSES = ["active", "success"];
+
+export function isInvalidConnection(conn) {
+  if (!conn) return false;
+  if (conn.lastError != null && conn.lastError !== "") return true;
+  // A missing/null testStatus means "never tested" or "freshly reset" — NOT
+  // invalid. Only an explicitly unhealthy status counts. Without this guard,
+  // bulkResetConnectionErrors (which nulls testStatus) would leave rows stuck
+  // in the invalid list forever, and never-tested connections would be
+  // wrongly flagged.
+  if (conn.testStatus == null || conn.testStatus === "") return false;
+  return !HEALTHY_STATUSES.includes(conn.testStatus);
+}
+
+export async function getInvalidConnections() {
+  const all = await getProviderConnections();
+  const invalid = all.filter(isInvalidConnection);
+
+  const bucketsByProvider = {};
+  for (const conn of invalid) {
+    const tag = getConnectionErrorTag(conn) || "ERR";
+    if (!bucketsByProvider[conn.provider]) bucketsByProvider[conn.provider] = {};
+    if (!bucketsByProvider[conn.provider][tag]) bucketsByProvider[conn.provider][tag] = [];
+    bucketsByProvider[conn.provider][tag].push(conn);
+  }
+
+  const providers = Object.entries(bucketsByProvider).map(([provider, buckets]) => {
+    const conns = Object.values(buckets).flat();
+    return {
+      provider,
+      total: conns.length,
+      buckets,
+    };
+  });
+
+  return { providers };
 }
