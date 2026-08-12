@@ -35,10 +35,11 @@ export default function InvalidProviderGroup({ provider, onBulk }) {
   };
 
   const handleBulk = async () => {
+    const { action, ids } = confirmState;
     setConfirmState(null);
     setBusy(true);
     try {
-      await onBulk({ provider: provider.provider, action: confirmState.action, ids: tabSelected });
+      await onBulk({ provider: provider.provider, action, ids });
     } finally {
       setBusy(false);
     }
@@ -53,7 +54,7 @@ export default function InvalidProviderGroup({ provider, onBulk }) {
           onClick={() => setExpanded((v) => !v)}
         >
           <span className="material-symbols-outlined text-[18px] text-text-muted">
-            {expanded ? "expand_more" : "expand_less"}
+            {expanded ? "expand_less" : "expand_more"}
           </span>
           <Badge variant="error" size="sm" dot>{provider.provider}</Badge>
           <span className="text-[13px] text-text-muted">{provider.total} invalid</span>
@@ -77,7 +78,7 @@ export default function InvalidProviderGroup({ provider, onBulk }) {
               variant="secondary"
               size="sm"
               disabled={tabSelected.length === 0 || busy}
-              onClick={() => setConfirmState({ action: "reset", title: "Reset last error?", message: `Reset last error for ${tabSelected.length} connection(s)? This clears their error status but keeps the connection.` })}
+              onClick={() => setConfirmState({ action: "reset", ids: [...tabSelected], title: "Reset last error?", message: `Reset last error for ${tabSelected.length} connection(s)? This clears their error status but keeps the connection.` })}
             >
               Reset selected
             </Button>
@@ -86,7 +87,7 @@ export default function InvalidProviderGroup({ provider, onBulk }) {
               size="sm"
               className="!border-amber-500/40 !text-amber-400 hover:!bg-amber-500/10"
               disabled={tabSelected.length === 0 || busy}
-              onClick={() => setConfirmState({ action: "disable", title: "Disable selected?", message: `Disable ${tabSelected.length} connection(s) for ${provider.provider}?` })}
+              onClick={() => setConfirmState({ action: "disable", ids: [...tabSelected], title: "Disable selected?", message: `Disable ${tabSelected.length} connection(s) for ${provider.provider}?` })}
             >
               Disable selected
             </Button>
@@ -94,7 +95,7 @@ export default function InvalidProviderGroup({ provider, onBulk }) {
               variant="danger"
               size="sm"
               disabled={tabSelected.length === 0 || busy}
-              onClick={() => setConfirmState({ action: "delete", title: "Permanently delete?", message: `Permanently delete ${tabSelected.length} connection(s) for ${provider.provider}? This is a hard delete and cannot be undone.` })}
+              onClick={() => setConfirmState({ action: "delete", ids: [...tabSelected], title: "Permanently delete?", message: `Permanently delete ${tabSelected.length} connection(s) for ${provider.provider}? This is a hard delete and cannot be undone.` })}
             >
               Delete selected
             </Button>

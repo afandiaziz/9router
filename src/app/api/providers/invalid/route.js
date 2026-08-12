@@ -3,13 +3,19 @@ import { getInvalidConnections } from "@/models";
 
 export const dynamic = "force-dynamic";
 
+const SAFE_FIELDS = [
+  "id", "provider", "authType", "name", "email", "displayName",
+  "priority", "isActive",
+  "testStatus", "lastError", "lastErrorAt", "errorCode", "lastErrorType",
+  "lastTested", "createdAt", "updatedAt",
+];
+
 function sanitize(conn) {
-  const c = { ...conn };
-  delete c.apiKey;
-  delete c.accessToken;
-  delete c.refreshToken;
-  delete c.idToken;
-  return c;
+  const safe = {};
+  for (const f of SAFE_FIELDS) {
+    if (conn[f] !== undefined) safe[f] = conn[f];
+  }
+  return safe;
 }
 
 // GET /api/providers/invalid - List provider connections with errors, grouped

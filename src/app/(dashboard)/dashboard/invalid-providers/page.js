@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardSkeleton } from "@/shared/components";
 import { useNotificationStore } from "@/store/notificationStore";
 import InvalidProviderGroup from "./components/InvalidProviderGroup";
@@ -9,17 +9,21 @@ export default function InvalidProvidersPage() {
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const notify = useNotificationStore();
+  const fetchRef = useRef(0);
 
   const load = async () => {
+    const seq = ++fetchRef.current;
     setLoading(true);
     try {
       const res = await fetch("/api/providers/invalid");
       const data = await res.json();
+      if (seq !== fetchRef.current) return;
       setProviders(data?.providers || []);
     } catch (e) {
+      if (seq !== fetchRef.current) return;
       notify.error("Failed to load invalid providers");
     } finally {
-      setLoading(false);
+      if (seq === fetchRef.current) setLoading(false);
     }
   };
 
