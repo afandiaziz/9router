@@ -608,15 +608,22 @@ export async function buildModelsList(kindFilter, options = {}) {
  * alias so clients use the alias in chat requests (e.g. "danton/grok-4.5").
  *
  * allowedModels is [{ model: "gcli/grok-4.5", alias: "danton/grok-4.5" }, ...].
- * The full model catalog uses real provider/model IDs (e.g. "gcli/grok-4.5").
- * We match by the real model ID, then rewrite the response id to the alias.
+ *
+ * The quota key's allowlist is authoritative — if the admin explicitly added a model
+ * (e.g. "gcli/grok-4.5-high"), it is routable and should appear regardless of whether
+ * it exists in the static PROVIDER_MODELS catalog. We only intersect with the full
+ * catalog to preserve metadata (owned_by, capabilities); models not found in the
+ * catalog are still emitted as minimal entries with the alias as id.
  */
 export function filterModelsForQuotaKey(allModels, allowedModels) {
   if (!Array.isArray(allowedModels) || allowedModels.length === 0) return allModels;
-  const aliasByModel = new Map(allowedModels.map((e) => [e.model, e.alias || e.model]));
-  return allModels
-    .filter((m) => aliasByModel.has(m.id))
-    .map((m) => ({ ...m, id: aliasByModel.get(m.id) }));
+  const catalogById = new Map(allModels.map((m) => [m.id, m]));
+  return allowedModels.map((e) => {
+    const model = e.model;
+    const alias = e.alias || model;
+    const entry = catalogById.get(model);
+    return entry ? { ...entry, id: alias } : { id: alias, object: "model", owned_by: "quota-key" };
+  });
 }
 
 /**
