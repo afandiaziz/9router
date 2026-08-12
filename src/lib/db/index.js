@@ -15,6 +15,7 @@ export {
   deleteProviderConnection, deleteProviderConnectionsByProvider,
   reorderProviderConnections, cleanupProviderConnections,
   getInvalidConnections,
+  bulkSetConnectionsActive, bulkDeleteConnections, bulkResetConnectionErrors,
 } from "./repos/connectionsRepo.js";
 
 // Provider nodes

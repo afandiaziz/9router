@@ -263,6 +263,68 @@ export async function cleanupProviderConnections() {
 
 const HEALTHY_STATUSES = ["active", "success"];
 
+export async function bulkSetConnectionsActive(ids, isActive) {
+  const db = await getAdapter();
+  const list = Array.isArray(ids) ? ids : [];
+  if (isActive !== true && isActive !== false) return { affected: 0, skipped: list };
+  const affected = [];
+  const skipped = [];
+  db.transaction(() => {
+    for (const id of list) {
+      const row = db.get(`SELECT id FROM providerConnections WHERE id = ?`, [id]);
+      if (!row) { skipped.push(id); continue; }
+      db.run(`UPDATE providerConnections SET isActive = ?, updatedAt = ? WHERE id = ?`,
+        [isActive ? 1 : 0, new Date().toISOString(), id]);
+      affected.push(id);
+    }
+  });
+  return { affected: affected.length, skipped };
+}
+
+export async function bulkDeleteConnections(ids) {
+  const db = await getAdapter();
+  const list = Array.isArray(ids) ? ids : [];
+  const affected = [];
+  const skipped = [];
+  db.transaction(() => {
+    for (const id of list) {
+      const row = db.get(`SELECT provider FROM providerConnections WHERE id = ?`, [id]);
+      if (!row) { skipped.push(id); continue; }
+      db.run(`DELETE FROM providerConnections WHERE id = ?`, [id]);
+      reorderInTx(db, row.provider);
+      affected.push(id);
+    }
+  });
+  return { affected: affected.length, skipped };
+}
+
+const RESET_ERROR_FIELDS = {
+  lastError: null,
+  lastErrorAt: null,
+  lastErrorType: null,
+  errorCode: null,
+  testStatus: null,
+  rateLimitedUntil: null,
+};
+
+export async function bulkResetConnectionErrors(ids) {
+  const db = await getAdapter();
+  const list = Array.isArray(ids) ? ids : [];
+  const affected = [];
+  const skipped = [];
+  db.transaction(() => {
+    for (const id of list) {
+      const row = db.get(`SELECT * FROM providerConnections WHERE id = ?`, [id]);
+      if (!row) { skipped.push(id); continue; }
+      const existing = rowToConn(row);
+      const merged = { ...existing, ...RESET_ERROR_FIELDS, updatedAt: new Date().toISOString() };
+      upsert(db, merged);
+      affected.push(id);
+    }
+  });
+  return { affected: affected.length, skipped };
+}
+
 export function isInvalidConnection(conn) {
   if (!conn) return false;
   if (conn.lastError != null && conn.lastError !== "") return true;

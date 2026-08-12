@@ -7,6 +7,7 @@ export {
   deleteProviderConnection, deleteProviderConnectionsByProvider,
   reorderProviderConnections, cleanupProviderConnections,
   getInvalidConnections,
+  bulkSetConnectionsActive, bulkDeleteConnections, bulkResetConnectionErrors,
   getProviderNodes, getProviderNodeById,
   createProviderNode, updateProviderNode, deleteProviderNode,
   getProxyPools, getProxyPoolById,

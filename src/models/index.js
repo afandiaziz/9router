@@ -17,6 +17,7 @@ export {
   deleteProxyPool,
   deleteProviderConnectionsByProvider,
   getInvalidConnections,
+  bulkSetConnectionsActive, bulkDeleteConnections, bulkResetConnectionErrors,
   getCombos,
   getComboById,
   getComboByName,
