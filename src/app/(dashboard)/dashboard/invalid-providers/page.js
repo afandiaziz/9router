@@ -48,8 +48,8 @@ export default function InvalidProvidersPage() {
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
-        <p className="text-[14px] font-semibold text-amber-400">⚠ Invalid Providers</p>
-        <p className="text-[13px] text-amber-500/90 mt-1">
+        <p className="text-lg sm:text-xl font-semibold text-amber-400">⚠ Invalid Providers</p>
+        <p className="text-sm text-amber-500/90 mt-1">
           Provider connections with errors. Disable &amp; delete here are destructive — delete is a permanent hard delete that cannot be undone. Use with caution.
         </p>
       </div>
@@ -57,7 +57,7 @@ export default function InvalidProvidersPage() {
       {loading ? (
         <CardSkeleton />
       ) : providers.length === 0 ? (
-        <Card><p className="p-4 text-[13px] text-text-muted">No invalid providers.</p></Card>
+        <Card><p className="p-4 text-sm text-text-muted">No invalid providers.</p></Card>
       ) : (
         providers.map((p) => (
           <InvalidProviderGroup key={p.provider} provider={p} onBulk={handleBulk} />

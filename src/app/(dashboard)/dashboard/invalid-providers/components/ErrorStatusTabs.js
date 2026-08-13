@@ -16,7 +16,7 @@ export default function ErrorStatusTabs({ buckets, activeTab, onSelect }) {
             type="button"
             onClick={() => onSelect(tag)}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all",
+              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
               active
                 ? "bg-primary/10 text-primary"
                 : "text-text-muted hover:bg-surface-2 hover:text-text-main"
