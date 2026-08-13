@@ -19,6 +19,10 @@ export default function InvalidProviderGroup({ provider, onBulk }) {
   const tabSelected = (selected[currentTab] || []).filter((id) => rows.some((r) => r.id === id));
   const allChecked = rows.length > 0 && tabSelected.length === rows.length;
 
+  const details = provider?.providerDetails || {};
+  const providerName = details.name || provider.provider;
+  const providerId = details.id || provider.provider;
+
   const toggleRow = (id) => {
     setSelected((prev) => {
       const cur = prev[currentTab] || [];
@@ -53,11 +57,31 @@ export default function InvalidProviderGroup({ provider, onBulk }) {
           className="flex flex-1 items-center gap-3 px-2 py-3 text-left"
           onClick={() => setExpanded((v) => !v)}
         >
-          <span className="material-symbols-outlined text-[18px] text-text-muted">
+          <span className="material-symbols-outlined text-xl text-text-muted">
             {expanded ? "expand_less" : "expand_more"}
           </span>
-          <Badge variant="error" size="sm" dot>{provider.provider}</Badge>
-          <span className="text-[13px] text-text-muted">{provider.total} invalid</span>
+          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-base sm:text-lg font-semibold text-text-main truncate min-w-0">
+                {providerName}
+              </span>
+              <Badge variant="error" size="sm" dot>{provider.total} invalid</Badge>
+            </div>
+            <div className="text-sm text-text-muted flex items-center gap-2 flex-wrap">
+              <span className="truncate max-w-[220px]">{providerId}</span>
+              {details.prefix && <span>· {details.prefix}</span>}
+              {(details.type || details.apiType) && (
+                <span>
+                  · {[details.type, details.apiType].filter(Boolean).join(" / ")}
+                </span>
+              )}
+              {details.baseUrl && (
+                <span className="truncate max-w-[260px] min-w-0" title={details.baseUrl}>
+                  · {details.baseUrl}
+                </span>
+              )}
+            </div>
+          </div>
         </button>
       </div>
 
@@ -65,7 +89,7 @@ export default function InvalidProviderGroup({ provider, onBulk }) {
         <div className="px-2 pb-3">
           <ErrorStatusTabs buckets={buckets} activeTab={currentTab} onSelect={setActiveTab} />
           <div className="flex items-center gap-3 mb-2">
-            <label className="flex items-center gap-2 text-[13px] cursor-pointer">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
                 checked={allChecked}
@@ -102,9 +126,9 @@ export default function InvalidProviderGroup({ provider, onBulk }) {
           </div>
 
           {rows.length === 0 ? (
-            <p className="text-[13px] text-text-muted py-4">No connections in this bucket.</p>
+            <p className="text-sm text-text-muted py-4">No connections in this bucket.</p>
           ) : (
-            <table className="w-full text-left text-[13px]">
+            <table className="w-full text-left text-sm">
               <tbody>
                 {rows.map((conn) => {
                   const checked = tabSelected.includes(conn.id);
@@ -125,7 +149,7 @@ export default function InvalidProviderGroup({ provider, onBulk }) {
                         <span className="text-text-muted">{conn.authType}</span>
                         {conn.isActive === false && <Badge variant="warning" size="sm">disabled</Badge>}
                       </td>
-                      <td className="py-2 pr-3 text-red-500 truncate max-w-[260px]">{conn.lastError}</td>
+                      <td className="py-2 pr-3 text-red-500 leading-relaxed truncate max-w-[260px]">{conn.lastError}</td>
                       <td className="py-2 text-text-muted whitespace-nowrap">{conn.lastErrorAt ? getRelativeTime(conn.lastErrorAt) : ""}</td>
                     </tr>
                   );
