@@ -75,4 +75,31 @@ describe("GET /v1/models — caps overrides and model aliases", () => {
     expect(aliasModel.owned_by).toBe("alias");
     expect(aliasModel.context_length).toBe(250000);
   });
+
+  it("computes conservative minimum context and capabilities for combos", async () => {
+    mocks.getCombos.mockResolvedValue([
+      {
+        id: "combo-1",
+        name: "test-combo",
+        models: ["openai/gpt-4o", "anthropic/claude-3-haiku-20240307"],
+      },
+    ]);
+    mocks.getCapsOverrides.mockResolvedValue({
+      "openai|gpt-4o": { contextWindow: 128000, maxOutput: 4096, vision: true, tools: true },
+      "anthropic|claude-3-haiku-20240307": { contextWindow: 200000, maxOutput: 4096, vision: false, tools: true },
+    });
+
+    const response = await GET(new Request("http://localhost:20128/v1/models"));
+    const data = await response.json();
+    const combo = data.data.find((m) => m.id === "test-combo");
+
+    expect(combo).toBeTruthy();
+    expect(combo.owned_by).toBe("combo");
+    // Minimum context window (min(128k, 200k) = 128k)
+    expect(combo.context_length).toBe(128000);
+    // Intersection of boolean capabilities (vision is false because haiku has false)
+    expect(combo.capabilities.vision).toBe(false);
+    // Tools is true because both support tools
+    expect(combo.capabilities.tools).toBe(true);
+  });
 });

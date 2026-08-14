@@ -18,7 +18,7 @@ import { resolveCursorModels } from "open-sse/services/cursorModels.js";
 import { resolveZedModels } from "open-sse/shared/zedAuth.js";
 import { updateProviderCredentials } from "@/sse/services/tokenRefresh";
 import { resolveConnectionProxyConfig } from "@/lib/network/connectionProxy";
-import { capabilitiesFromServiceKind, getCapabilitiesForModel } from "open-sse/providers/capabilities.js";
+import { capabilitiesFromServiceKind, getCapabilitiesForModel, getConservativeComboCapabilities } from "open-sse/providers/capabilities.js";
 
 // Per-provider live model resolvers. Each receives a connection record and
 // returns { models: [{ id, name? }, ...] } | null on failure.
@@ -310,6 +310,16 @@ export async function buildModelsList(kindFilter, options = {}) {
     };
     if (combo.kind === "webSearch" || combo.kind === "webFetch") {
       entry.kind = combo.kind;
+    } else if (!combo.kind || combo.kind === LLM_KIND) {
+      // Conservative minimal capabilities: minimum context window, minimum max output,
+      // and intersection (all must support) for boolean modalities (vision, tools, reasoning).
+      const comboModelsList = Array.isArray(combo.models) ? combo.models : [];
+      const comboCaps = getConservativeComboCapabilities(comboModelsList, capsOverrides);
+      if (comboCaps) {
+        entry.capabilities = comboCaps;
+        if (Number.isFinite(comboCaps.contextWindow)) entry.context_length = comboCaps.contextWindow;
+        if (Number.isFinite(comboCaps.maxOutput)) entry.max_completion_tokens = comboCaps.maxOutput;
+      }
     }
     models.push(entry);
   }
