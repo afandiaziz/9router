@@ -273,6 +273,18 @@ export default function ModelsPage() {
     });
   };
 
+  const allCollapsed = useMemo(() => {
+    return visibleGroups.length > 0 && visibleGroups.every((g) => collapsedGroups.has(g.key));
+  }, [visibleGroups, collapsedGroups]);
+
+  const toggleAllCollapse = () => {
+    if (allCollapsed) {
+      setCollapsedGroups(new Set());
+    } else {
+      setCollapsedGroups(new Set(groups.map((g) => g.key)));
+    }
+  };
+
   const collapseAll = () => {
     setCollapsedGroups(new Set(groups.map((g) => g.key)));
   };
@@ -415,8 +427,8 @@ export default function ModelsPage() {
         </Button>
       </div>
 
-      {/* Search + scope filter + provider filter */}
-      <div className="flex flex-col gap-3">
+      {/* Search + scope filter + collapse toggle + provider filter */}
+      <div className="flex flex-col gap-2.5">
         <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
           <input
             type="text"
@@ -425,15 +437,28 @@ export default function ModelsPage() {
             placeholder="Search by model id, name or alias..."
             className={`${inputClass} flex-1`}
           />
-          <SegmentedControl
-            options={[
-              { value: "all", label: "All" },
-              { value: "active", label: "Active" },
-            ]}
-            value={scopeFilter}
-            onChange={setScopeFilter}
-            size="sm"
-          />
+          <div className="flex items-center gap-1.5 shrink-0">
+            <SegmentedControl
+              options={[
+                { value: "all", label: "All" },
+                { value: "active", label: "Active" },
+              ]}
+              value={scopeFilter}
+              onChange={setScopeFilter}
+              size="sm"
+            />
+            <button
+              type="button"
+              onClick={toggleAllCollapse}
+              title={allCollapsed ? "Expand all" : "Collapse all"}
+              aria-label={allCollapsed ? "Expand all" : "Collapse all"}
+              className="inline-flex items-center justify-center h-8 w-8 rounded-[8px] bg-surface-2 hover:bg-surface text-text-muted hover:text-text-main transition-all border border-transparent hover:border-border cursor-pointer shadow-none hover:shadow-sm"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {allCollapsed ? "unfold_more" : "unfold_less"}
+              </span>
+            </button>
+          </div>
           <select
             value={providerFilter}
             onChange={(e) => setProviderFilter(e.target.value)}
@@ -452,23 +477,6 @@ export default function ModelsPage() {
           <span>
             {visibleGroups.reduce((acc, g) => acc + g.models.length, 0)} models · {visibleGroups.length} providers
           </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={expandAll}
-              className="hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[15px]">unfold_more</span>
-              Expand all
-            </button>
-            <span>·</span>
-            <button
-              onClick={collapseAll}
-              className="hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[15px]">unfold_less</span>
-              Collapse all
-            </button>
-          </div>
         </div>
       </div>
 
