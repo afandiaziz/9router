@@ -18,6 +18,7 @@ export default {
     },
   },
   category: "apikey",
+  modelsFetcher: { url: "https://api.commandcode.ai/provider/v1/models" },
   transport: {
     baseUrl: "https://api.commandcode.ai/alpha/generate",
     format: "commandcode",

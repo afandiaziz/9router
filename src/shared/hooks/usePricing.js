@@ -39,13 +39,14 @@ export function usePricing() {
 
   useEffect(() => {
     let alive = true;
+    const apply = (data) => { if (alive) setPricing(data); };
     if (cache) {
-      setPricing(cache);
+      apply(cache);
     } else {
-      loadPricing().then((data) => { if (alive) setPricing(data); });
+      loadPricing().then(apply);
     }
     const onChanged = () => {
-      loadPricing().then((data) => { if (alive) setPricing(data); });
+      loadPricing().then(apply);
     };
     window.addEventListener(PRICING_CHANGED_EVENT, onChanged);
     return () => {

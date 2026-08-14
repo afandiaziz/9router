@@ -178,4 +178,11 @@ describe("fetchViaDerivedEndpoint", () => {
     expect(result.warning).toContain("falling back to static catalog");
     expect(result.models.length).toBeGreaterThan(0);
   });
+
+  it("uses Command Code's public provider models endpoint", () => {
+    expect(deriveModelsEndpoint(getRegistryEntry("commandcode"))).toEqual({
+      url: "https://api.commandcode.ai/provider/v1/models",
+      style: "openai",
+    });
+  });
 });
