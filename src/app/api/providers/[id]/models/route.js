@@ -86,7 +86,6 @@ const resolveQwenModelsUrl = (connection) => {
   }
   return `https://${value.replace(/\/$/, "")}/v1/models`;
 };
-
 // Generic custom resolver for OAuth providers that need refresh-on-401 + token persist.
 // Receives a `fetchFn(token)` and returns parsed models or throws.
 const buildOAuthResolver = ({ refreshFn, fetchFn, parseFn, errorLabel }) => async (connection) => {

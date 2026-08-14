@@ -184,5 +184,8 @@ describe("fetchViaDerivedEndpoint", () => {
       url: "https://api.commandcode.ai/provider/v1/models",
       style: "openai",
     });
+    const staticModels = getStaticProviderModels("commandcode");
+    expect(staticModels[0]?.id).toBe("deepseek/deepseek-v4-pro");
+    expect(staticModels.length).toBe(11);
   });
 });
