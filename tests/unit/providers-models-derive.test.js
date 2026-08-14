@@ -178,4 +178,12 @@ describe("fetchViaDerivedEndpoint", () => {
     expect(result.warning).toContain("falling back to static catalog");
     expect(result.models.length).toBeGreaterThan(0);
   });
+
+  it("provides full static catalog for commandcode", () => {
+    const models = getStaticProviderModels("commandcode");
+    expect(models.length).toBe(58);
+    expect(models.some((m) => m.id === "claude-sonnet-5")).toBe(true);
+    expect(models.some((m) => m.id === "deepseek/deepseek-v4-pro")).toBe(true);
+    expect(models.some((m) => m.id === "zai-org/GLM-5.3")).toBe(true);
+  });
 });
