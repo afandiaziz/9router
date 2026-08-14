@@ -481,9 +481,6 @@ export async function GET(request, { params }) {
       if (deriveModelsEndpoint(getRegistryEntry(connection.provider))) {
         return NextResponse.json({ supported: true });
       }
-      if (getStaticProviderModels(connection.provider).length > 0) {
-        return NextResponse.json({ supported: true });
-      }
       return NextResponse.json({
         supported: false,
         reason: `Provider ${connection.provider} does not support models listing`,
@@ -568,14 +565,6 @@ export async function GET(request, { params }) {
     if (!config) {
       const endpoint = deriveModelsEndpoint(getRegistryEntry(connection.provider));
       if (!endpoint) {
-        const staticModels = getStaticProviderModels(connection.provider);
-        if (staticModels.length > 0) {
-          return NextResponse.json({
-            provider: connection.provider,
-            connectionId: connection.id,
-            models: staticModels,
-          });
-        }
         return NextResponse.json(
           { error: `Provider ${connection.provider} does not support models listing` },
           { status: 400 }

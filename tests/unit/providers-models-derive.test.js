@@ -179,11 +179,13 @@ describe("fetchViaDerivedEndpoint", () => {
     expect(result.models.length).toBeGreaterThan(0);
   });
 
-  it("provides full static catalog for commandcode", () => {
-    const models = getStaticProviderModels("commandcode");
-    expect(models.length).toBe(58);
-    expect(models.some((m) => m.id === "claude-sonnet-5")).toBe(true);
-    expect(models.some((m) => m.id === "deepseek/deepseek-v4-pro")).toBe(true);
-    expect(models.some((m) => m.id === "zai-org/GLM-5.3")).toBe(true);
+  it("uses Command Code's public provider models endpoint", () => {
+    expect(deriveModelsEndpoint(getRegistryEntry("commandcode"))).toEqual({
+      url: "https://api.commandcode.ai/provider/v1/models",
+      style: "openai",
+    });
+    const staticModels = getStaticProviderModels("commandcode");
+    expect(staticModels[0]?.id).toBe("deepseek/deepseek-v4-pro");
+    expect(staticModels.length).toBe(11);
   });
 });
