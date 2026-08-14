@@ -17,7 +17,7 @@
   "API Key": "Ключ API",
   "Connected": "Подключено",
   "Disconnected": "Отключено",
-  "Active": "Активно",
+  "Active": "Активные",
   "Inactive": "Неактивно",
   "Success": "Успех",
   "Failed": "Ошибка",
@@ -261,5 +261,8 @@
   "Copy a link and paste to your AI to use 9Router — no install needed": "Скопируйте ссылку и вставьте в ваш AI для использования 9Router — без установки",
   "Media Providers": "Медиа-провайдеры",
   "Manage your": "Управление",
-  "providers": "провайдерами"
+  "providers": "провайдерами",
+  "All": "Все",
+  "Expand all": "Развернуть все",
+  "Collapse all": "Свернуть все"
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import PropTypes from "prop-types";
-import { Card, Button, CardSkeleton, ConfirmModal, CapacityBadges } from "@/shared/components";
+import { Card, Button, CardSkeleton, ConfirmModal, CapacityBadges, SegmentedControl } from "@/shared/components";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import { PROVIDER_MODELS, getModelKind } from "@/shared/constants/models";
 import { getProviderAlias, getProviderByAlias } from "@/shared/constants/providers";
@@ -18,6 +18,7 @@ const inputClass =
 
 export default function ModelsPage() {
   const [loading, setLoading] = useState(true);
+  const [connections, setConnections] = useState([]);
   const [customModels, setCustomModels] = useState([]);
   const [disabledMap, setDisabledMap] = useState({});
   const [aliasByModel, setAliasByModel] = useState({});
@@ -26,6 +27,8 @@ export default function ModelsPage() {
   const [modelsDev, setModelsDev] = useState(null);
   const [search, setSearch] = useState("");
   const [providerFilter, setProviderFilter] = useState("");
+  const [scopeFilter, setScopeFilter] = useState("all"); // "all" | "active"
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
   const [editing, setEditing] = useState(null);
   const [confirmState, setConfirmState] = useState(null);
   const [mdAction, setMdAction] = useState({});
@@ -34,13 +37,14 @@ export default function ModelsPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [customRes, disabledRes, aliasRes, pricingRes, capsRes, mdRes] = await Promise.all([
+      const [customRes, disabledRes, aliasRes, pricingRes, capsRes, mdRes, provRes] = await Promise.all([
         fetch("/api/models/custom"),
         fetch("/api/models/disabled"),
         fetch("/api/models/alias"),
         fetch("/api/pricing"),
         fetch("/api/models/caps"),
         fetch("/api/models-dev"),
+        fetch("/api/providers"),
       ]);
       if (customRes.ok) {
         const data = await customRes.json();
@@ -62,6 +66,10 @@ export default function ModelsPage() {
         setCapsOverrides(data.overrides || {});
       }
       if (mdRes.ok) setModelsDev(await mdRes.json());
+      if (provRes.ok) {
+        const data = await provRes.json();
+        setConnections(data.connections || data.providers || (Array.isArray(data) ? data : []));
+      }
     } catch (error) {
       console.log("Error fetching models data:", error);
     } finally {
@@ -147,11 +155,30 @@ export default function ModelsPage() {
     [pricing]
   );
 
+  const activeProviderAliases = useMemo(() => {
+    const set = new Set();
+    for (const c of connections) {
+      if (c.isActive !== false) {
+        const alias = getProviderAlias(c.provider) || c.provider;
+        if (alias) set.add(alias);
+        if (c.provider) set.add(c.provider);
+      }
+    }
+    return set;
+  }, [connections]);
+
   const visibleGroups = useMemo(() => {
     const q = search.trim().toLowerCase();
     return groups
       .map((group) => {
         if (providerFilter && group.key !== providerFilter) return null;
+        if (
+          scopeFilter === "active" &&
+          !activeProviderAliases.has(group.key) &&
+          !activeProviderAliases.has(group.providerId)
+        ) {
+          return null;
+        }
         const models = q
           ? group.models.filter(
               (m) =>
@@ -163,7 +190,24 @@ export default function ModelsPage() {
         return models.length > 0 ? { ...group, models } : null;
       })
       .filter(Boolean);
-  }, [groups, search, providerFilter, getAliasFor]);
+  }, [groups, search, providerFilter, scopeFilter, activeProviderAliases, getAliasFor]);
+
+  const toggleGroupCollapse = (key) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const collapseAll = () => {
+    setCollapsedGroups(new Set(groups.map((g) => g.key)));
+  };
+
+  const expandAll = () => {
+    setCollapsedGroups(new Set());
+  };
 
   const openEdit = (row) => {
     const staticCaps = getCapabilitiesForModel(row.isCustom ? row.providerAlias : row.providerId, row.id) || {};
@@ -299,27 +343,61 @@ export default function ModelsPage() {
         </Button>
       </div>
 
-      {/* Search + provider filter */}
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by model id, name or alias..."
-          className={`${inputClass} flex-1`}
-        />
-        <select
-          value={providerFilter}
-          onChange={(e) => setProviderFilter(e.target.value)}
-          className={`${inputClass} sm:w-64`}
-        >
-          <option value="">All providers</option>
-          {groups.map((g) => (
-            <option key={g.key} value={g.key}>
-              {g.name}
-            </option>
-          ))}
-        </select>
+      {/* Search + scope filter + provider filter */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by model id, name or alias..."
+            className={`${inputClass} flex-1`}
+          />
+          <SegmentedControl
+            options={[
+              { value: "all", label: "All" },
+              { value: "active", label: "Active" },
+            ]}
+            value={scopeFilter}
+            onChange={setScopeFilter}
+            size="sm"
+          />
+          <select
+            value={providerFilter}
+            onChange={(e) => setProviderFilter(e.target.value)}
+            className={`${inputClass} sm:w-56`}
+          >
+            <option value="">All providers</option>
+            {groups.map((g) => (
+              <option key={g.key} value={g.key}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-text-muted px-0.5">
+          <span>
+            {visibleGroups.reduce((acc, g) => acc + g.models.length, 0)} models · {visibleGroups.length} providers
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={expandAll}
+              className="hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[15px]">unfold_more</span>
+              Expand all
+            </button>
+            <span>·</span>
+            <button
+              onClick={collapseAll}
+              className="hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[15px]">unfold_less</span>
+              Collapse all
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Groups */}
@@ -334,14 +412,21 @@ export default function ModelsPage() {
               resolveModelsDevProviderId(group.key, catalogIds)
             : null;
           const action = mdAction[group.key];
+          const isCollapsed = collapsedGroups.has(group.key);
           return (
             <Card key={group.key}>
-              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-                <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <button
+                  onClick={() => toggleGroupCollapse(group.key)}
+                  className="flex items-center gap-2 min-w-0 text-left hover:opacity-80 transition-opacity flex-1 py-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-lg text-text-muted">
+                    {isCollapsed ? "chevron_right" : "expand_more"}
+                  </span>
                   <ProviderIcon providerId={group.providerId} size={20} fallbackText={group.name.charAt(0)} />
                   <h3 className="font-semibold text-text-main truncate">{group.name}</h3>
-                  <span className="text-xs text-text-muted">{group.models.length}</span>
-                </div>
+                  <span className="text-xs text-text-muted px-1.5 py-0.5 rounded bg-surface-2">{group.models.length}</span>
+                </button>
                 {mdTarget && (
                   <Button
                     size="sm"
@@ -354,23 +439,25 @@ export default function ModelsPage() {
                   </Button>
                 )}
               </div>
-              {action?.message && <p className="text-xs text-green-600 mb-2">{action.message}</p>}
-              {action?.error && <p className="text-xs text-red-500 mb-2">{action.error}</p>}
-              <div className="flex flex-col gap-1.5">
-                {group.models.map((row) => (
-                  <ModelRow
-                    key={row.key}
-                    row={row}
-                    caps={getCaps(`${row.providerAlias}/${row.id}`)}
-                    alias={getAliasFor(row)}
-                    disabled={isDisabled(row)}
-                    price={getPricingFor(row)}
-                    onEdit={() => openEdit(row)}
-                    onToggleDisabled={() => handleToggleDisabled(row, isDisabled(row))}
-                    onDelete={row.isCustom ? () => handleDeleteCustom(row) : null}
-                  />
-                ))}
-              </div>
+              {action?.message && <p className="text-xs text-green-600 my-2">{action.message}</p>}
+              {action?.error && <p className="text-xs text-red-500 my-2">{action.error}</p>}
+              {!isCollapsed && (
+                <div className="flex flex-col gap-1.5 mt-3">
+                  {group.models.map((row) => (
+                    <ModelRow
+                      key={row.key}
+                      row={row}
+                      caps={getCaps(`${row.providerAlias}/${row.id}`)}
+                      alias={getAliasFor(row)}
+                      disabled={isDisabled(row)}
+                      price={getPricingFor(row)}
+                      onEdit={() => openEdit(row)}
+                      onToggleDisabled={() => handleToggleDisabled(row, isDisabled(row))}
+                      onDelete={row.isCustom ? () => handleDeleteCustom(row) : null}
+                    />
+                  ))}
+                </div>
+              )}
             </Card>
           );
         })

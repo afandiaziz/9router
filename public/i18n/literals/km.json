@@ -1438,5 +1438,7 @@
   "Compress prompts and outputs to save tokens": "Compress prompts and outputs to save tokens",
   "Agent Skills": "Agent Skills",
   "Manage your": "Manage your",
-  "providers": "providers"
+  "providers": "providers",
+  "Expand all": "Expand all",
+  "Collapse all": "Collapse all"
 }
