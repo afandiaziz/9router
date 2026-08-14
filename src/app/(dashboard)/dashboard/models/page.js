@@ -19,6 +19,7 @@ const inputClass =
 export default function ModelsPage() {
   const [loading, setLoading] = useState(true);
   const [connections, setConnections] = useState([]);
+  const [providerNodes, setProviderNodes] = useState([]);
   const [customModels, setCustomModels] = useState([]);
   const [disabledMap, setDisabledMap] = useState({});
   const [aliasByModel, setAliasByModel] = useState({});
@@ -37,7 +38,7 @@ export default function ModelsPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [customRes, disabledRes, aliasRes, pricingRes, capsRes, mdRes, provRes] = await Promise.all([
+      const [customRes, disabledRes, aliasRes, pricingRes, capsRes, mdRes, provRes, nodesRes] = await Promise.all([
         fetch("/api/models/custom"),
         fetch("/api/models/disabled"),
         fetch("/api/models/alias"),
@@ -45,6 +46,7 @@ export default function ModelsPage() {
         fetch("/api/models/caps"),
         fetch("/api/models-dev"),
         fetch("/api/providers"),
+        fetch("/api/provider-nodes"),
       ]);
       if (customRes.ok) {
         const data = await customRes.json();
@@ -70,6 +72,10 @@ export default function ModelsPage() {
         const data = await provRes.json();
         setConnections(data.connections || data.providers || (Array.isArray(data) ? data : []));
       }
+      if (nodesRes.ok) {
+        const data = await nodesRes.json();
+        setProviderNodes(Array.isArray(data) ? data : data.nodes || []);
+      }
     } catch (error) {
       console.log("Error fetching models data:", error);
     } finally {
@@ -81,16 +87,82 @@ export default function ModelsPage() {
     fetchData();
   }, [fetchData]);
 
+  const getProviderInfo = useCallback((alias) => {
+    // 1. Check providerNodes by id or prefix
+    const node = providerNodes.find(
+      (n) => n.id === alias || n.prefix === alias || n.data?.prefix === alias
+    );
+    if (node?.name) {
+      return {
+        providerId: node.id,
+        name: node.name,
+        iconId: node.id?.startsWith("anthropic") ? "anthropic" : "openai",
+      };
+    }
+
+    // 2. Check connections by provider, id or prefix
+    const conn = connections.find(
+      (c) => c.provider === alias || c.id === alias || c.providerSpecificData?.prefix === alias
+    );
+    if (conn?.providerSpecificData?.nodeName) {
+      return {
+        providerId: conn.provider || alias,
+        name: conn.providerSpecificData.nodeName,
+        iconId: (conn.provider || "").startsWith("anthropic") ? "anthropic" : "openai",
+      };
+    }
+    if (conn?.name && (alias.startsWith("openai-compatible") || alias.startsWith("anthropic-compatible") || alias.startsWith("custom-embedding"))) {
+      return {
+        providerId: conn.provider || alias,
+        name: conn.name,
+        iconId: (conn.provider || "").startsWith("anthropic") ? "anthropic" : "openai",
+      };
+    }
+
+    // 3. Static registry
+    const provider = getProviderByAlias(alias);
+    if (provider) {
+      return {
+        providerId: provider.id || alias,
+        name: provider.name || alias,
+        iconId: provider.id || alias,
+      };
+    }
+
+    // 4. Clean fallback for raw compatible IDs if no connection/node exists
+    if (alias.startsWith("openai-compatible")) {
+      return {
+        providerId: alias,
+        name: "OpenAI Compatible",
+        iconId: "openai",
+      };
+    }
+    if (alias.startsWith("anthropic-compatible")) {
+      return {
+        providerId: alias,
+        name: "Anthropic Compatible",
+        iconId: "anthropic",
+      };
+    }
+
+    return {
+      providerId: alias,
+      name: alias,
+      iconId: alias,
+    };
+  }, [providerNodes, connections]);
+
   // All LLM models grouped by provider alias (built-in + custom)
   const groups = useMemo(() => {
     const map = new Map();
     const ensure = (alias) => {
       if (!map.has(alias)) {
-        const provider = getProviderByAlias(alias);
+        const info = getProviderInfo(alias);
         map.set(alias, {
           key: alias,
-          providerId: provider?.id || null,
-          name: provider?.name || alias,
+          providerId: info.providerId,
+          name: info.name,
+          iconId: info.iconId,
           models: [],
         });
       }
@@ -128,7 +200,7 @@ export default function ModelsPage() {
 
     for (const group of map.values()) group.models.sort((a, b) => a.id.localeCompare(b.id));
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [customModels]);
+  }, [customModels, getProviderInfo]);
 
   const catalogIds = useMemo(
     () => new Set((modelsDev?.providers || []).map((p) => p.id)),
@@ -423,7 +495,7 @@ export default function ModelsPage() {
                   <span className="material-symbols-outlined text-lg text-text-muted">
                     {isCollapsed ? "chevron_right" : "expand_more"}
                   </span>
-                  <ProviderIcon providerId={group.providerId} size={20} fallbackText={group.name.charAt(0)} />
+                  <ProviderIcon providerId={group.iconId || group.providerId} size={20} fallbackText={group.name.charAt(0)} />
                   <h3 className="font-semibold text-text-main truncate">{group.name}</h3>
                   <span className="text-xs text-text-muted px-1.5 py-0.5 rounded bg-surface-2">{group.models.length}</span>
                 </button>
