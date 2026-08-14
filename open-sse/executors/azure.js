@@ -103,17 +103,13 @@ export class AzureExecutor extends DefaultExecutor {
       delete transformed.temperature;
     }
 
-    const hasTools =
-      Array.isArray(transformed.tools) &&
-      transformed.tools.length > 0;
-
     /*
-     * This Azure deployment rejects reasoning_effort entirely when
-     * function tools are used through /chat/completions.
-     *
-     * Do not send reasoning_effort="none"; remove the field.
+     * This Azure GPT-5 deployment rejects reasoning_effort entirely through
+     * /chat/completions. "none" is a no-op signal the backend rejects, so drop
+     * it regardless of tools; with function tools the field is forbidden even
+     * for real values, so strip it there too.
      */
-    if (hasTools) {
+    if (transformed.reasoning_effort === "none" || (Array.isArray(transformed.tools) && transformed.tools.length > 0)) {
       delete transformed.reasoning_effort;
     }
 
