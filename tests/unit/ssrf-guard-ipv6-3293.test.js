@@ -93,3 +93,25 @@ describe("assertPublicUrl — regressions guarded elsewhere", () => {
     allowed("http://8.8.8.8/");
   });
 });
+
+describe("assertPublicUrl — reserved ranges and scheme", () => {
+  // Reserved space that the original list left out. 169.254/16 was already
+  // covered, but the neighbouring blocks are just as unroutable.
+  it("blocks reserved and non-routable IPv4 blocks", () => {
+    blocked("http://100.64.0.1/");     // CGNAT
+    blocked("http://192.0.0.1/");      // IETF protocol assignments
+    blocked("http://198.18.0.1/");     // benchmarking
+    blocked("http://239.255.255.250/"); // multicast (SSDP)
+    blocked("http://255.255.255.255/"); // reserved
+  });
+
+  it("rejects a non-http(s) scheme outright", () => {
+    blocked("file:///etc/passwd");
+    blocked("gopher://example.com/");
+    blocked("ftp://example.com/");
+  });
+
+  it("ignores a trailing dot on the hostname", () => {
+    blocked("http://localhost./");
+  });
+});

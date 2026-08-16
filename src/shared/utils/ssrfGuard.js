@@ -21,10 +21,15 @@ function ipv4ToInt(host) {
 const BLOCKED_V4_RANGES = [
   [ipv4ToInt("0.0.0.0"), 8],
   [ipv4ToInt("10.0.0.0"), 8],
+  [ipv4ToInt("100.64.0.0"), 10],      // CGNAT
   [ipv4ToInt("127.0.0.0"), 8],
-  [ipv4ToInt("169.254.0.0"), 16],
+  [ipv4ToInt("169.254.0.0"), 16],     // link-local + cloud metadata
   [ipv4ToInt("172.16.0.0"), 12],
+  [ipv4ToInt("192.0.0.0"), 24],       // IETF protocol assignments
   [ipv4ToInt("192.168.0.0"), 16],
+  [ipv4ToInt("198.18.0.0"), 15],      // benchmarking
+  [ipv4ToInt("224.0.0.0"), 4],        // multicast
+  [ipv4ToInt("240.0.0.0"), 4],        // reserved, incl. 255.255.255.255
 ];
 
 function isBlockedIpv4(host) {
@@ -92,10 +97,18 @@ function isBlockedIpv6(host) {
 }
 
 // Throw if URL targets a non-public host. Caller should map to 400.
+//
+// This is a string check: it cannot see where a hostname resolves to. A caller
+// that then opens the connection itself needs a DNS-aware layer on top —
+// see the note on #3293.
 export function assertPublicUrl(rawUrl) {
   const parsed = new URL(rawUrl);
-  const host = parsed.hostname.toLowerCase();
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Blocked URL: unsupported protocol");
+  }
+  const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
 
+  if (!host) throw new Error("Blocked URL: missing host");
   if (BLOCKED_HOSTNAMES.has(host)) throw new Error("Blocked URL: internal host");
   if (BLOCKED_SUFFIXES.some((s) => host.endsWith(s))) throw new Error("Blocked URL: internal host");
   if (isBlockedIpv4(host)) throw new Error("Blocked URL: private IP");
