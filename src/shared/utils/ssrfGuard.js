@@ -36,12 +36,59 @@ function isBlockedIpv4(host) {
   });
 }
 
+// Expand an IPv6 literal to its 16 bytes, or null if it is not one.
+//
+// Matching on the text is not enough: WHATWG URL canonicalizes an embedded
+// dotted quad to hextets, so `new URL("http://[::ffff:127.0.0.1]")` reports its
+// hostname as `[::ffff:7f00:1]`. A pattern written against the dotted spelling
+// therefore never matches anything that came out of the parser. Normalize to
+// bytes once and judge the address itself.
+function ipv6ToBytes(host) {
+  let text = host;
+
+  // A trailing dotted quad (::ffff:127.0.0.1) is just another spelling of the
+  // two hextets it encodes — rewrite it so one parser covers both.
+  const dotted = text.match(/^(.*:)(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (dotted) {
+    const value = ipv4ToInt(dotted[2]);
+    if (value === null) return null;
+    text = `${dotted[1]}${(value >>> 16).toString(16)}:${(value & 0xffff).toString(16)}`;
+  }
+
+  const halves = text.split("::");
+  if (halves.length > 2) return null;
+  const head = halves[0] ? halves[0].split(":") : [];
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  const gap = halves.length === 2 ? 8 - head.length - tail.length : 0;
+  if (gap < 0 || (halves.length === 1 && head.length !== 8)) return null;
+
+  const bytes = [];
+  for (const hextet of [...head, ...Array(gap).fill("0"), ...tail]) {
+    if (!/^[0-9a-f]{1,4}$/.test(hextet)) return null;
+    const value = Number.parseInt(hextet, 16);
+    bytes.push(value >>> 8, value & 0xff);
+  }
+  return bytes.length === 16 ? bytes : null;
+}
+
 function isBlockedIpv6(host) {
-  const h = host.replace(/^\[|\]$/g, "").toLowerCase();
-  const v4Mapped = h.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (v4Mapped) return isBlockedIpv4(v4Mapped[1]);
-  if (h === "::1" || h === "::") return true;
-  return h.startsWith("fe80:") || h.startsWith("fc") || h.startsWith("fd");
+  // Drop brackets and any zone id (fe80::1%eth0).
+  const bytes = ipv6ToBytes(host.replace(/^\[|\]$/g, "").toLowerCase().split("%")[0]);
+  if (!bytes) return false;
+
+  // ::ffff:a.b.c.d (v4-mapped) and ::a.b.c.d (v4-compatible) connect to the
+  // embedded IPv4 address, so they have to be judged as IPv4 — this is also
+  // what catches :: and ::1, as 0.0.0.0 and 0.0.0.1 in 0.0.0.0/8.
+  if (bytes.slice(0, 10).every((b) => b === 0)) {
+    const embedsIpv4 =
+      (bytes[10] === 0xff && bytes[11] === 0xff) || (bytes[10] === 0 && bytes[11] === 0);
+    if (embedsIpv4) {
+      return isBlockedIpv4(bytes.slice(12).join("."));
+    }
+  }
+
+  if ((bytes[0] & 0xfe) === 0xfc) return true;                          // fc00::/7  unique-local
+  return bytes[0] === 0xfe && (bytes[1] & 0xc0) === 0x80;               // fe80::/10 link-local
 }
 
 // Throw if URL targets a non-public host. Caller should map to 400.
