@@ -121,6 +121,10 @@ import p118 from "./selfhosted-tts.js";
 import p119 from "./selfhosted-embedding.js";
 import p120 from "./fish-audio.js";
 import p121 from "./alitp-intl.js";
+import p122 from "./reasonix.js";
+import p123 from "./ovh.js";
+import p124 from "./joycode.js";
+import p125 from "./openmodel.js";
 
 export default [
   p0,
@@ -243,4 +247,8 @@ export default [
   p119,
   p120,
   p121,
+  p122,
+  p123,
+  p124,
+  p125,
 ];
