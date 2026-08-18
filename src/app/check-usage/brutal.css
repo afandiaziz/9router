@@ -1,0 +1,190 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap");
+
+/* Brutalist skin for /check-usage — scoped so it never touches the dashboard.
+   Palette lifted from mocasus (theme-brutal light). Always light. */
+.brutal-scope {
+  --background: 45 30% 96%;
+  --foreground: 0 0% 5%;
+  --card: 45 40% 97%;
+  --card-foreground: 0 0% 5%;
+  --primary: 340 78% 46%;
+  --primary-foreground: 0 0% 100%;
+  --muted: 45 20% 90%;
+  --muted-foreground: 0 0% 35%;
+  --border: 0 0% 0%;
+  --ring: 340 78% 46%;
+  --brutal-yellow: 50 90% 65%;
+  --brutal-blue: 210 90% 60%;
+  --brutal-green: 150 80% 45%;
+  --brutal-orange: 25 95% 60%;
+  --brutal-purple: 270 70% 60%;
+  --brutal-pink: 340 82% 58%;
+  --radius: 0.5rem;
+
+  min-height: 100vh;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: "Space Grotesk", "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+}
+
+.brutal-scope * { border-color: hsl(var(--border)); }
+
+/* ---- Brutalist hard offset shadows ---- */
+.brutal-scope .shadow-brutal-sm { box-shadow: 2px 2px 0 0 rgb(0, 0, 0); }
+.brutal-scope .shadow-brutal    { box-shadow: 4px 4px 0 0 rgb(0, 0, 0); }
+.brutal-scope .shadow-brutal-lg { box-shadow: 6px 6px 0 0 rgb(0, 0, 0); }
+
+/* ---- Dotted background pattern ---- */
+.brutal-scope.bg-dots,
+.brutal-scope .bg-dots {
+  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.15) 1px, rgba(0, 0, 0, 0) 1px);
+  background-size: 20px 20px;
+}
+
+/* ---- Hover lift + tilt ---- */
+.brutal-scope .hover-lift { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.brutal-scope .hover-lift:hover { transform: translateY(-0.25rem); box-shadow: 6px 6px 0 0 rgb(0, 0, 0); }
+@keyframes brutal-tilt-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+  75% { transform: rotate(-1deg); }
+}
+.brutal-scope .hover-tilt-shake:hover { animation: brutal-tilt-shake 0.4s ease-in-out; }
+
+/* ---- Components ---- */
+.brutal-scope .b-card {
+  border: 2px solid hsl(var(--border));
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 0 rgb(0, 0, 0);
+}
+
+.brutal-scope .b-input {
+  width: 100%;
+  height: 3rem;
+  border: 2px solid hsl(var(--border));
+  background-color: hsl(var(--background));
+  border-radius: var(--radius);
+  box-shadow: 2px 2px 0 0 rgb(0, 0, 0);
+  padding: 0 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  outline: none;
+}
+.brutal-scope .b-input:focus-visible { box-shadow: 0 0 0 3px hsl(var(--ring) / 0.4), 2px 2px 0 0 rgb(0, 0, 0); }
+
+.brutal-scope .b-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  font-weight: 700;
+  border: 2px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 4px 4px 0 0 rgb(0, 0, 0);
+  height: 2.75rem; padding: 0 1.5rem;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.brutal-scope .b-btn:hover:not(:disabled) { box-shadow: 6px 6px 0 0 rgb(0, 0, 0); transform: translateY(-0.15rem); }
+.brutal-scope .b-btn:active:not(:disabled) { box-shadow: none; transform: translate(2px, 2px); }
+.brutal-scope .b-btn:disabled { opacity: 0.5; }
+
+.brutal-scope .b-btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  font-weight: 700;
+  border: 2px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  box-shadow: 4px 4px 0 0 rgb(0, 0, 0);
+  height: 2.75rem; padding: 0 1.5rem;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.brutal-scope .b-btn-ghost:hover:not(:disabled) { box-shadow: 6px 6px 0 0 rgb(0, 0, 0); transform: translateY(-0.15rem); }
+.brutal-scope .b-btn-ghost:active:not(:disabled) { box-shadow: none; transform: translate(2px, 2px); }
+
+.brutal-scope .b-chip {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border: 2px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background-color: hsl(var(--card));
+  box-shadow: 2px 2px 0 0 rgb(0, 0, 0);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.brutal-scope .b-chip:hover { transform: translateY(-0.1rem); }
+
+.brutal-scope .b-badge {
+  padding: 0.15rem 0.55rem;
+  border: 2px solid hsl(var(--border));
+  border-radius: 9999px;
+  font-size: 0.7rem; font-weight: 700;
+  box-shadow: 2px 2px 0 0 rgb(0, 0, 0);
+}
+.brutal-scope .b-badge-ok  { background-color: hsl(var(--brutal-green)); color: #05230f; }
+.brutal-scope .b-badge-bad { background-color: hsl(0 84% 60%); color: #fff; }
+
+.brutal-scope .b-tab {
+  padding: 0.4rem 0.85rem; font-size: 0.75rem; font-weight: 700;
+  border: 2px solid hsl(var(--border)); border-radius: var(--radius);
+  background-color: hsl(var(--card)); color: hsl(var(--muted-foreground));
+  box-shadow: 2px 2px 0 0 rgb(0, 0, 0);
+  transition: transform 0.12s ease;
+}
+.brutal-scope .b-tab:hover { transform: translateY(-0.1rem); }
+.brutal-scope .b-tab-active { background-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+
+.brutal-scope .b-pre {
+  border: 2px solid hsl(var(--border)); border-radius: var(--radius);
+  background-color: #faf6ec; color: hsl(var(--foreground));
+  box-shadow: 2px 2px 0 0 rgb(0, 0, 0);
+  padding: 0.75rem; font-size: 0.75rem; overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.brutal-scope .b-alert {
+  border: 2px solid hsl(var(--border)); border-radius: var(--radius);
+  background-color: hsl(0 84% 94%); color: hsl(0 70% 30%);
+  box-shadow: 2px 2px 0 0 rgb(0, 0, 0);
+  padding: 0.6rem 0.85rem; font-weight: 700; text-align: center;
+}
+
+/* ---- Animations ---- */
+@keyframes brutal-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+.brutal-scope .animate-float { animation: brutal-float 3s ease-in-out infinite; }
+
+@keyframes brutal-reveal-up {
+  0% { opacity: 0; transform: translateY(40px) scale(0.97); filter: blur(4px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+.brutal-scope .animate-reveal-up { animation: 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0s 1 normal forwards brutal-reveal-up; }
+
+@keyframes brutal-spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.brutal-scope .animate-spin-slow { animation: brutal-spin-slow 1s linear infinite; }
+
+@keyframes brutal-pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+.brutal-scope .animate-pulse-soft { animation: brutal-pulse-soft 2.4s ease-in-out infinite; }
+
+@keyframes brutal-spark-fly {
+  0% { opacity: 1; transform: translate(0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.2); }
+}
+.brutal-scope-spark {
+  position: fixed; width: 5px; height: 5px; border-radius: 50%;
+  pointer-events: none; z-index: 99999;
+  background: hsl(340 78% 46%);
+  animation: brutal-spark-fly 0.4s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brutal-scope .animate-float,
+  .brutal-scope .animate-reveal-up,
+  .brutal-scope .animate-spin-slow,
+  .brutal-scope .animate-pulse-soft,
+  .brutal-scope .hover-tilt-shake:hover,
+  .brutal-scope-spark {
+    animation: none !important;
+  }
+}
