@@ -279,6 +279,8 @@ rm -rf .docker-data
 docker rmi 9router-local   # opsional, kalau image tidak dipakai lagi
 ```
 
+Perhatian: `.docker-data` **tidak** ada di `.gitignore` repo ini — direktori itu berisi SQLite uji (plus credential dummy apa pun yang Anda buat). Jalankan cleanup di atas sebelum `git add`/commit, atau pastikan `git status` tidak pernah menyertakan `.docker-data/`.
+
 Catatan: image ini memakai port default 20128 (dari `Dockerfile`). Compose produksi menimpanya ke 20129 via `.env` VPS — jangan menyamakan laptop dengan nilai produksi.
 
 ## 9. Troubleshooting

@@ -233,7 +233,7 @@ $DATA_DIR/
 
 Di host produksi, data hidup di `/home/ubuntu/9router/data/` (termasuk `data/db/`). Stack DB: SQLite via `better-sqlite3` (optionalDependency) dengan fallback `node:sqlite` / `sql.js` — sejak v0.5.55, `sql.js` ikut dikirim di image agar fallback pure-JS bisa start (`27f3710c8`). Skema fork menambah tabel `quotaKeys` dan `quotaUsage` (`1ff511e04`).
 
-Log request opsional: `<repo>/logs/...` bila `ENABLE_REQUEST_LOGS=true`.
+Log request opsional ditulis ke `logs/` di bawah working directory proses (`process.cwd()`, lihat `open-sse/utils/requestLogger.js`) bila `ENABLE_REQUEST_LOGS=true`: di laptop itu berarti `<repo>/logs/`; di container produksi cwd adalah `/app`, sehingga log mendarat di `/app/logs` **di dalam container** (bukan di volume `./data`) dan ikut hilang saat container dibuat ulang.
 
 ### 4.3 Secret & portability
 
