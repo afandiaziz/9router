@@ -104,14 +104,14 @@
 .brutal-scope .b-btn-ghost:active:not(:disabled) { box-shadow: none; transform: translate(2px, 2px); }
 
 .brutal-scope .b-chip {
-  display: inline-flex; align-items: center; gap: 0.25rem;
-  padding: 0.25rem 0.5rem;
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
   border: 2px solid hsl(var(--border));
   border-radius: var(--radius);
   background-color: hsl(var(--card));
   box-shadow: 2px 2px 0 0 rgb(0, 0, 0);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   cursor: pointer;
 }
 .brutal-scope .b-chip:hover { transform: translateY(-0.1rem); }
@@ -151,6 +151,40 @@
   padding: 0.6rem 0.85rem; font-weight: 700; text-align: center;
 }
 
+/* ---- Progress bar (fill-grow + shimmer) ---- */
+.brutal-scope .b-progress-track {
+  width: 100%; height: 1rem; border-radius: var(--radius);
+  border: 2px solid hsl(var(--border));
+  background: hsl(var(--muted));
+  overflow: hidden;
+}
+.brutal-scope .b-progress-fill {
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.brutal-scope .b-progress-fill::after {
+  content: "";
+  position: absolute; top: 0; left: 0; height: 100%; width: 50%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: brutal-shimmer 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes brutal-shimmer {
+  0% { transform: translateX(-120%) skewX(-20deg); }
+  100% { transform: translateX(220%) skewX(-20deg); }
+}
+
+/* ---- Chip copy pop ---- */
+@keyframes brutal-copy-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.12); }
+  70% { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+.brutal-scope .b-chip-pop { animation: brutal-copy-pop 0.35s ease-in-out; }
+
 /* ---- Animations ---- */
 @keyframes brutal-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
 .brutal-scope .animate-float { animation: brutal-float 3s ease-in-out infinite; }
@@ -184,7 +218,10 @@
   .brutal-scope .animate-spin-slow,
   .brutal-scope .animate-pulse-soft,
   .brutal-scope .hover-tilt-shake:hover,
+  .brutal-scope .b-chip-pop,
+  .brutal-scope .b-progress-fill::after,
   .brutal-scope-spark {
     animation: none !important;
   }
+  .brutal-scope .b-progress-fill { transition: none !important; }
 }
