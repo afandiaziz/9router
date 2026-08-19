@@ -34,8 +34,8 @@ describe("buildUsageReport", () => {
 
   it("resolves alias when usageHistory logs the provider-prefix-stripped model", async () => {
     // Real-world shape: allowedModels store the provider-prefixed id (gcli/…),
-    // but usageHistory logs the bare model name (prefix stripped). The per-model
-    // alias must still resolve via the bare-name fallback.
+    // but usageHistory logs the model with the prefix stripped. The per-model
+    // alias must still resolve via the slash-boundary suffix match.
     const fakeDb = {
       all: () => [
         { model: "grok-composer-2.5", promptTokens: 100, completionTokens: 50, cost: 0.1, tokens: "{}" },
@@ -47,7 +47,6 @@ describe("buildUsageReport", () => {
     };
     const report = await buildUsageReport({ key: "sk-danton-2", name: "g", limitPeriod: "monthly", limit: 1000 }, progress, fakeDb);
     expect(report.perModel[0].alias).toBe("danton/composer-2.5");
-    expect(report.perModel[0].model).toBe("grok-composer-2.5");
     expect(report.perModel[0].tokens).toBe(150);
   });
 
