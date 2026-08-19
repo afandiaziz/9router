@@ -2,7 +2,7 @@
 
 Panduan operasional untuk mengembangkan fork `afandiaziz/9router` di laptop pribadi dan me-release-nya dengan aman ke production VPS. Ditulis dalam bahasa Indonesia teknis; semua perintah diverifikasi terhadap file repository dan layout produksi saat ini.
 
-**Terakhir diverifikasi:** 2026-08-19 · HEAD `master`: `137f02daf` (docs: plan fork development handbook) · Versi paket: `0.5.55` (lihat `package.json`).
+**Terakhir diverifikasi:** 2026-08-19 · Versi paket: `0.5.55` (lihat `package.json`). Hash HEAD tidak dicantumkan agar dokumen tidak basi setelah setiap commit — verifikasi mengacu pada tanggal, bukan commit tertentu.
 
 ---
 
@@ -114,7 +114,7 @@ Referensi kanonik: `FORK-CHANGES.md` — tabel per-PR berisi status (deployed/st
 
 Kebijakan:
 
-- **Selalu trial merge di branch upgrade**, bukan di `master` (kasus nyata: merge v0.5.55, lihat [bagian 3.3](#33-merge-v0555--security-fix--fork20)).
+- **Selalu trial merge di branch upgrade**, bukan di `master` (kasus nyata: merge v0.5.55, lihat [bagian 3.3](#33-merge-v0555--security-fix-fork20)).
 - **Buat backup branch/tag** sebelum merge (contoh nyata: `backup/pre-v055-merge`).
 - Prioritaskan versi upstream di luar fitur khas fork; pertahankan fitur fork (lihat [bagian 2.5](#25-fitur-fork-yang-dilindungi)).
 - Catat keputusan konflik di `FORK-CHANGES.md` agar konflik berikutnya lebih cepat diselesaikan.
@@ -217,6 +217,8 @@ Motivasi: instance ini mengelola ribuan koneksi provider (per FORK-CHANGES.md: 3
 
 Catatan: README upstream menyebut `20128` di mana-mana. Di fork ini angka itu hanya relevan untuk image default; development laptop memakai `20127` dan produksi `20129`.
 
+Server block nginx yang sama (`/etc/nginx/sites-enabled/9router.afandiaziz.my.id`) juga memuat `location /freemodel/` yang di-proxy ke `http://127.0.0.1:8090`. Itu adalah **service terpisah di luar scope fork 9router** — tidak dibangun dari repo ini, tidak di-deploy lewat pipeline GHCR/Compose di atas, dan tidak dibahas runbook mana pun di handbook ini. Disebut di sini hanya agar pembaca tidak salah mengira port `8090` sebagai bagian dari topology 9router.
+
 ### 4.2 Layout data
 
 Di container, `DATA_DIR=/app/data` (`Dockerfile`), dipetakan ke volume/named volume compose. Layout (dari `DOCKER.md`):
@@ -270,6 +272,8 @@ Handbook ini menjelaskan konsep dan kebijakan. Checklist yang bisa dieksekusi ad
 | [runbooks/upstream-sync.md](runbooks/upstream-sync.md) | Membandingkan fork dengan upstream, trial merge, resolusi konflik, termasuk studi kasus v0.5.55. |
 | [runbooks/release-and-deploy.md](runbooks/release-and-deploy.md) | Gate pra-rilis, tagging, verifikasi CI/GHCR, backup, deploy Compose, smoke test. |
 | [runbooks/rollback-and-recovery.md](runbooks/rollback-and-recovery.md) | Rollback image vs restore DB, batasan migrasi skema, troubleshooting insiden deploy. |
+
+**Catatan `.gitignore`:** repo ini mengabaikan `docs/*` secara default (aturan `docs/*` di `.gitignore`, warisan upstream), jadi file dokumentasi yang memang **intentional** harus di-allow-list secara eksplisit. `docs/FORK-DEVELOPMENT-HANDBOOK.md` dan `docs/runbooks/` sudah ditambahkan sebagai pengecualian (`!docs/FORK-DEVELOPMENT-HANDBOOK.md`, `!docs/runbooks/`, `!docs/runbooks/*`) mengikuti pola `!docs/ARCHITECTURE.md` yang sudah ada. `docs/runbooks/` di-allow-list sebagai direktori karena keempat runbook dibuat bertahap di task terpisah; tanpa pengecualian direktori, setiap file baru di bawahnya akan kembali ter-ignore. File `docs/superpowers/**` (specs/plans) tidak ter-cover aturan ini karena `docs/*` hanya mencakup satu level — namun file handbook/runbook berada tepat di bawah `docs/`, sehingga pengecualian eksplisit diperlukan.
 
 ---
 
