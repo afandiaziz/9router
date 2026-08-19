@@ -320,11 +320,8 @@ export default function CheckUsagePage() {
                       <div key={i} className="flex justify-between items-center b-card shadow-brutal-sm p-2">
                         <div>
                           <span className="font-mono text-sm">{m.alias || m.model}</span>
-                          {m.alias && m.alias !== m.model && (
-                            <span className="text-xs ml-2" style={{ color: "hsl(var(--muted-foreground))" }}>({m.model})</span>
-                          )}
                         </div>
-                        <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>{m.tokens.toLocaleString()} tokens</span>
+                        <span className="font-mono text-sm">{m.tokens.toLocaleString()} tokens</span>
                       </div>
                     ))}
                   </div>
