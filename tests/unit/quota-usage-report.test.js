@@ -31,4 +31,42 @@ describe("buildUsageReport", () => {
     expect(report.perModel[0].alias).toBe("xai/grok-4.5");
     expect(report.perModel[0].tokens).toBe(105);
   });
+
+  it("resolves alias when usageHistory logs the provider-prefix-stripped model", async () => {
+    // Real-world shape: allowedModels store the provider-prefixed id (gcli/…),
+    // but usageHistory logs the bare model name (prefix stripped). The per-model
+    // alias must still resolve via the bare-name fallback.
+    const fakeDb = {
+      all: () => [
+        { model: "grok-composer-2.5", promptTokens: 100, completionTokens: 50, cost: 0.1, tokens: "{}" },
+      ],
+    };
+    const progress = {
+      tokensUsed: 150, limit: 1000, percent: 15, resetsAt: null, isActive: true,
+      allowedModels: [{ model: "gcli/grok-composer-2.5", alias: "danton/composer-2.5" }],
+    };
+    const report = await buildUsageReport({ key: "sk-danton-2", name: "g", limitPeriod: "monthly", limit: 1000 }, progress, fakeDb);
+    expect(report.perModel[0].alias).toBe("danton/composer-2.5");
+    expect(report.perModel[0].model).toBe("grok-composer-2.5");
+    expect(report.perModel[0].tokens).toBe(150);
+  });
+
+  it("does not cross-match different bare names sharing a prefix", async () => {
+    // grok-4.5 (logged) must NOT match gcli/grok-4.5-high's alias — bare-name
+    // comparison is exact per segment, not substring.
+    const fakeDb = {
+      all: () => [
+        { model: "grok-4.5", promptTokens: 10, completionTokens: 0, cost: 0, tokens: "{}" },
+      ],
+    };
+    const progress = {
+      tokensUsed: 10, limit: 1000, percent: 1, resetsAt: null, isActive: true,
+      allowedModels: [
+        { model: "gcli/grok-4.5-high", alias: "danton/grok-4.5-high" },
+        { model: "gcli/grok-4.5", alias: "danton/grok-4.5" },
+      ],
+    };
+    const report = await buildUsageReport({ key: "sk-danton-3", name: "h", limitPeriod: "monthly", limit: 1000 }, progress, fakeDb);
+    expect(report.perModel[0].alias).toBe("danton/grok-4.5");
+  });
 });

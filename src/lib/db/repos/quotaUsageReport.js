@@ -46,10 +46,22 @@ export async function buildUsageReport(apiKeyRow, progress, db) {
     perModelMap[model].tokens += (Number(r.promptTokens) || 0) + (Number(r.completionTokens) || 0);
   }
 
-  // Resolve aliases for per-model display
+  // Resolve aliases for per-model display.
+  // usageHistory logs the model as routed (often with the provider prefix
+  // stripped, e.g. "grok-composer-2.5"), while allowedModels stores the
+  // provider-prefixed id ("gcli/grok-composer-2.5"). Match exactly first, then
+  // fall back to a slash-boundary suffix match so the alias still resolves.
+  // The "/" boundary keeps this precise: "grok-4.5" won't match "grok-4.5-high",
+  // and a bare "4.5" won't match "grok-4.5".
   const allowedModels = progress.allowedModels || [];
+  const suffixMatch = (allowedModel, logged) =>
+    allowedModel === logged ||
+    allowedModel.endsWith(`/${logged}`) ||
+    logged.endsWith(`/${allowedModel}`);
   const perModel = Object.values(perModelMap).map((m) => {
-    const entry = allowedModels.find((e) => e.model === m.model);
+    const entry =
+      allowedModels.find((e) => e.model === m.model) ||
+      allowedModels.find((e) => suffixMatch(e.model, m.model));
     return {
       alias: entry?.alias || m.model,
       model: m.model,
