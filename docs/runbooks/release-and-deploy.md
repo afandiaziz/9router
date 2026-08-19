@@ -62,13 +62,16 @@ Kriteria: selesai tanpa `Failed to compile`. Script ini menjalankan `next build 
 
 ### 1.5 Pemeriksaan keamanan
 
-- Tidak ada secret, token, atau nilai `.env` produksi di diff yang akan dirilis. Scan cepat:
+- Tidak ada secret, token, atau nilai `.env` produksi di diff yang akan dirilis. Scan cepat dengan **tag rilis terakhir sebagai basis** — bukan `origin/master`:
 
   ```bash
-  git diff origin/master...HEAD | grep -nE "sk-[A-Za-z0-9]|ghp_|gho_|xox[bap]-|-----BEGIN|eyJ[A-Za-z0-9_-]{10,}"
+  BASE_TAG=$(git describe --tags --abbrev=0)
+  git diff --stat "${BASE_TAG}"...HEAD
+  git diff "${BASE_TAG}"...HEAD | grep -nE "sk-[A-Za-z0-9]|ghp_|gho_|xox[bap]-|-----BEGIN|eyJ[A-Za-z0-9_-]{10,}"
   ```
 
-  Output kosong (exit 1) berarti bersih. Satu false positive kata biasa bisa ditoleransi setelah diperiksa mata.
+  Mengapa bukan `origin/master...HEAD`: di `master` setelah `git pull`, HEAD dan `origin/master` menunjuk commit yang sama — range-nya kosong, diff kosong, dan `grep` exit 1 **apa pun isi commit yang akan dirilis**. Exit 1 pada diff kosong bukan bukti apa-apa. Karena itu urutannya wajib: pertama pastikan range tidak kosong lewat output `git diff --stat` (harus menampilkan file yang berubah sejak tag terakhir), baru artikan output grep. Alternatif yang setara: jalankan scan di **branch fitur sebelum merge** dengan basis `master` (`git diff master...HEAD`).
+- Output grep kosong pada range yang **sudah dipastikan tidak kosong** berarti bersih. Satu false positive kata biasa bisa ditoleransi setelah diperiksa mata.
 - Kalau rilis membawa fix keamanan upstream (preseden: GHSA-pjm4-8fpg-f9p6 di v0.5.55), pastikan deskripsinya masuk pesan tag ([langkah 2.1](#21-membuat-dan-mendorong-tag)).
 
 ### 1.6 Pilih versi dan nomor fork
@@ -109,19 +112,30 @@ Workflow `.github/workflows/docker-publish.yml` hanya terpicu oleh dua hal (terv
 | Push tag berformat `v*` | `on.push.tags: ["v*"]` |
 | Manual dari tab Actions | `workflow_dispatch` |
 
-Push ke `master` **tidak** membangun image. Setelah push tag, verifikasi run:
+Push ke `master` **tidak** membangun image. Setelah push tag, identifikasi run untuk tag yang baru didorong — **jangan** `gh run watch` tanpa argumen (ia mengawasi run terbaru repo secara umum; bisa saja itu run lain atau bukan milik tag Anda):
 
 ```bash
-gh run list --workflow docker-publish.yml --limit 3
+TAG=v0.5.56-fork21   # sesuaikan dengan tag yang baru di-push
+RUN_ID=""
+for i in $(seq 1 30); do
+  RUN_ID=$(gh run list --workflow docker-publish.yml --branch "$TAG" --limit 1 --json databaseId,headBranch --jq '.[0] | select(.headBranch=="'"$TAG"'") | .databaseId // empty')
+  [ -n "$RUN_ID" ] && break
+  sleep 10
+done
+echo "RUN_ID=$RUN_ID"
 ```
 
-Tunggu sampai status `completed` dengan `conclusion: success`:
+Run yang terpicu push tag mencatat `headBranch` = nama tag, sehingga `--branch "$TAG"` cocok; seleksi `headBranch` di `--jq` menjaga agar run lama di branch lain tidak terambil keliru. Loop diperlukan karena run bisa baru muncul beberapa detik setelah push. Kalau setelah 30 kali percobaan `RUN_ID` tetap kosong, berarti workflow tidak terpicu — cek nama tag (harus diawali `v`) dan tab Actions.
+
+Tunggu sampai selesai dan wajibkan exit code mengikuti hasil run:
 
 ```bash
-gh run watch
+gh run watch "$RUN_ID" --exit-status
 ```
 
-Lihat log bila gagal: `gh run view --log-failed`.
+`--exit-status` membuat perintah exit non-zero bila `conclusion` bukan `success`, sehingga kegagalan tidak terlewat. Lihat log bila gagal: `gh run view "$RUN_ID" --log-failed`.
+
+**Fallback bila `gh` tidak tersedia:** buka `https://github.com/afandiaziz/9router/actions/workflows/docker-publish.yml`, pilih run yang branch-nya menunjuk tag baru, dan tunggu sampai hijau dari UI.
 
 ### 2.3 Tag image dan makna `latest`
 
@@ -168,21 +182,32 @@ docker inspect 9router --format '{{.Created}} | {{.Config.Image}} | {{.Image}}'
 
 Contoh format output (terverifikasi per 2026-08-19): `2026-08-18T18:11:36Z | ghcr.io/afandiaziz/9router:latest | sha256:4bd635...`. **Nilai pada contoh ini hanya ilustrasi berstempel tanggal — jangan pernah mencocokkan atau mengharapkan nilai yang sama.** Yang Anda catat adalah output perintah saat itu juga: tiga nilai ini — setelah deploy, `Created` **harus berubah** dan `Image` (digest) harus sama dengan digest registry dari [langkah 2.4](#24-verifikasi-digest-di-registry).
 
-### 3.2 Backup DB dan `.env`
+### 3.2 Backup DB dan `.env` (jendela tenang singkat)
 
-Wajib sebelum setiap deploy. Direktori backup produksi sudah memakai pola `db.bak-<label>-<timestamp>` (bukti di disk: `db.bak-2026-08-19-0107`, `db.bak-prefork5-2026-08-10-1540`):
+Wajib sebelum setiap deploy. Direktori backup produksi sudah memakai pola `db.bak-<label>-<timestamp>` (bukti di disk: `db.bak-2026-08-19-0107`, `db.bak-prefork5-2026-08-10-1540`).
+
+**Mengapa perlu jendela tenang:** DB berjalan dalam mode WAL — writer aktif di container menulis ke `data.sqlite-wal` terus-menerus. Menyalin direktori `data/db` saat container jalan berarti menyalin file yang sedang berubah: `data.sqlite` dan `-wal`-nya bisa tertangkap di momen berbeda, dan hasilnya bisa tidak konsisten. Dengan menghentikan container lebih dulu, semua writer berhenti, checkpoint WAL selesai, dan ketiga file (`data.sqlite`, `-wal`, `-shm`) tertangkap dalam keadaan diam pada momen yang sama — snapshot yang konsisten.
 
 ```bash
 cd /home/ubuntu/9router
-TS=$(date +%Y-%m-%d-%H%M)
+docker compose ps                                  # catat state baseline (Up, image, dll.)
+docker compose stop 9router
+TS=$(date +%Y-%m-%d-%H%M%S)
 cp -a data/db "data/db.bak-predeploy-${TS}"
 cp -a .env ".env.bak-predeploy-${TS}"
-ls -la data/db.bak-predeploy-${TS}
+chmod 600 ".env.bak-predeploy-${TS}"
+docker compose start 9router
+docker compose ps                                  # harus kembali Up
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:20129/api/health   # harus 200
+ls -la "data/db.bak-predeploy-${TS}"
 ```
 
-- Salin **seluruh direktori `data/db`**, bukan hanya `data.sqlite`: file `-wal` dan `-shm` adalah bagian dari state SQLite mode WAL; menyalin `data.sqlite` sendirian saat DB aktif bisa menghasilkan backup yang tidak konsisten.
-- `.env` ikut dibackup karena memuat `DB_ENCRYPTION_KEY` — tanpa key ini, DB terenkripsi hasil restore tidak bisa dibaca (handbook bagian 4.3). Nama `.env.bak-predeploy-${TS}` **sengaja dipasangkan** dengan `db.bak-predeploy-${TS}` memakai timestamp `${TS}` yang sama: key di `.env` harus cocok dengan backup DB pasangannya saat restore ([runbook rollback bagian 4.5](rollback-and-recovery.md#45-pastikan-db_encryption_key-cocok)). File backup `.env` memuat secret; jaga permission-nya (`chmod 600 .env.bak-*`) dan jangan pernah menyalinnya ke laptop atau meng-commit-nya.
+- Timestamp memakai presisi **detik** (`%H%M%S`, bukan `%H%M`) agar dua backup dalam menit yang sama tidak saling menimpa.
+- Salin **seluruh direktori `data/db`**, bukan hanya `data.sqlite`: file `-wal` dan `-shm` adalah bagian dari state SQLite mode WAL. Karena container distop, ketiganya konsisten satu sama lain.
+- Jendela down hanya selama `cp` (orde detik untuk DB berukuran wajar). **Jangan** melanjutkan ke deploy dengan service tetap stop — `docker compose start` di atas adalah bagian wajib prosedur. Service boleh dibiarkan stop **hanya** bila deploy mengikuti segera dan Anda sudah membuat keputusan jendela maintenance eksplisit (catat di log rilis).
+- `.env` ikut dibackup karena memuat `DB_ENCRYPTION_KEY` — tanpa key ini, DB terenkripsi hasil restore tidak bisa dibaca (handbook bagian 4.3). Nama `.env.bak-predeploy-${TS}` **sengaja dipasangkan** dengan `db.bak-predeploy-${TS}` memakai timestamp `${TS}` yang sama: key di `.env` harus cocok dengan backup DB pasangannya saat restore ([runbook rollback bagian 4.5](rollback-and-recovery.md#45-pastikan-db_encryption_key-cocok)). File backup `.env` memuat secret; jaga permission-nya (`chmod 600` di atas) dan jangan pernah menyalinnya ke laptop atau meng-commit-nya.
 - Verifikasi backup tidak kosong: `ls -la` harus menampilkan `data.sqlite` berukuran wajar beserta pasangan WAL/SHM-nya.
+- Tidak memakai `sqlite3 .backup`: CLI sqlite3 tidak terverifikasi tersedia di VPS, dan stop-start di atas sudah memberi konsistensi yang sama tanpa dependensi tambahan.
 
 > **Catatan:** backup otomatis aplikasi (`data/db/backups/`) hanya dibuat sebelum migrasi skema dan **mengecualikan** tabel `requestDetails` (komentar di `src/lib/db/backup.js`). Ia bukan pengganti backup pra-deploy di atas.
 

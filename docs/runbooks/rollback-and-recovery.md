@@ -40,7 +40,7 @@ Sebelum mengubah apa pun, bekukan keadaan gagal — Anda akan membutuhkannya unt
 
 ```bash
 cd /home/ubuntu/9router
-TS=$(date +%Y-%m-%d-%H%M)
+TS=$(date +%Y-%m-%d-%H%M%S)
 mkdir -p "incident-${TS}"
 docker compose logs --tail 500 9router > "incident-${TS}/logs.txt" 2>&1
 docker inspect 9router > "incident-${TS}/inspect.json"
@@ -74,7 +74,7 @@ Edit `docker-compose.yml`, ganti baris image:
 Sesuaikan dengan tag rilis stabil terakhir (daftar tag: `git tag -l "v*" | sort -V | tail -5` di repo fork; tag GHCR memakai format semver tanpa prefix `v`, mis. `0.5.55-fork20`). Backup compose lama sudah jadi kebiasaan produksi (bukti: `docker-compose.yml.bak-prefork5-2026-08-10-1540`) — tiru polanya:
 
 ```bash
-cp docker-compose.yml "docker-compose.yml.bak-rollback-$(date +%Y-%m-%d-%H%M)"
+cp docker-compose.yml "docker-compose.yml.bak-rollback-$(date +%Y-%m-%d-%H%M%S)"
 ```
 
 ### 3.3 Pull tag yang di-pin dan recreate
@@ -118,7 +118,7 @@ Wajib: SQLite mode WAL tidak boleh disalin saat ada writer aktif, dan container 
 ### 4.3 Amankan state rusak (jangan dihapus)
 
 ```bash
-TS=$(date +%Y-%m-%d-%H%M)
+TS=$(date +%Y-%m-%d-%H%M%S)
 mv data/db "data/db.failed-${TS}"
 ```
 
