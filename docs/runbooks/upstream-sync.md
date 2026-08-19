@@ -61,7 +61,7 @@ Interpretasi:
 
 - Angka pertama **0** berarti fork sudah memuat seluruh upstream — tidak ada yang perlu di-merge (situasi terverifikasi per 2026-08-19: `0`).
 - Angka pertama **> 0** berarti ada pekerjaan merge; lanjutkan ke [bagian 3](#3-trial-merge-yang-aman).
-- Angka kedua **> 0** itu normal dan diharapkan — itu fitur fork (terverifikasi per 2026-08-19: `113`). Angka ini tidak pernah nol selama fork hidup.
+- Angka kedua **> 0** itu normal dan diharapkan — itu fitur fork (`113+` per 2026-08-19). Angka ini tidak pernah nol selama fork hidup dan **terus bertambah** — setiap commit fork baru (termasuk commit dokumentasi seperti runbook ini) ikut menaikkannya. Jalankan perintahnya; jangan andalkan angka yang tertulis di sini.
 
 ### 2.4 Log dan file yang berubah di upstream
 
@@ -73,7 +73,7 @@ git diff --stat master...upstream/master
 Perhatikan titik dua (`..`, urutan commit) vs titik tiga (`...`, diff terhadap merge-base). Baca log untuk menemukan:
 
 - **Security fix / advisory GHSA** — prioritaskan merge secepatnya (pelajaran dari GHSA-pjm4-8fpg-f9p6: fork yang menunda merge menanggung risiko endpoint lokal terekspos).
-- **PR yang masuk daftar "Hindari" di `FORK-CHANGES.md`** — contoh nyata: PR #664 (`transformRequest` ganda yang mematikan logika executor, direvert di `9ed5be64`). PR seperti ini jangan diambil lagi; kalau sudah masuk upstream, rencanakan revert sesudah merge.
+- **PR yang masuk daftar "Hindari" di `FORK-CHANGES.md`** — contoh nyata: kasus `transformRequest` ganda yang mematikan logika executor, direvert di `9ed5be64`. Catatan penomoran: `FORK-CHANGES.md` memberi label PR **#664**, sedangkan pesan commit revert itu sendiri merujuk issue **#560** ("closes #560") — dokumen ini tidak menyatakan mana yang benar; keduanya menunjuk peristiwa revert yang sama (`9ed5be64`). PR seperti ini jangan diambil lagi; kalau sudah masuk upstream, rencanakan revert sesudah merge.
 - Perubahan pada file milik **fitur fork yang dilindungi** (quota sharing, check-usage, invalid providers — daftar lengkap di handbook bagian 2.5) — tandai untuk resolusi manual.
 
 ### 2.5 Membandingkan tag
@@ -156,7 +156,7 @@ Referensi cepat `--ours`/`--theirs` saat merge:
 | `git checkout --ours -- <file>` | Ambil versi fork (branch tempat Anda berada) |
 | `git checkout --theirs -- <file>` | Ambil versi upstream (yang sedang di-merge) |
 | `git diff --ours -- <file>` / `git diff --theirs -- <file>` | Lihat sisi masing-masing sebelum memutuskan |
-| `git log --oneline --merge -- <file>` | Commit dari kedua sisi yang menyentuh file ini |
+| `git log --oneline --merge -- <file>` | Commit dari kedua sisi yang menyentuh file ini (hanya saat merge berjalan / MERGE_HEAD tersedia) |
 
 **Mengapa trial merge, bukan tebakan:** hanya trial merge yang menunjukkan konflik *yang benar-benar terjadi* pada kombinasi commit saat ini. Membaca diff upstream secara terpisah tidak bisa memprediksi interaksi dengan perubahan fork; marker konflik dan daftar `--diff-filter=U` adalah bukti konkret yang bisa diverifikasi, ditautkan di commit message, dan dipelajari ulang nanti. Studi kasus di [bagian 6](#6-studi-kasus-merge-v0555) menunjukkan ketiga konflik v0.5.55 tidak bisa diputuskan secara benar tanpa melihat isi file hasil trial merge.
 
@@ -216,7 +216,7 @@ Fitur fork (quota sharing, invalid providers) tidak ikut konflik dan tetap utuh 
 |---|---|---|
 | `git merge --abort` error `MERGE_HEAD missing` | Tidak ada merge yang sedang berjalan | Aman — tree sudah bersih; cek `git status` |
 | Konflik muncul lagi di file yang sama setiap merge | PR fork sudah diambil upstream dalam bentuk lain | Ikuti instruksi `FORK-CHANGES.md`: `checkout --theirs`, hapus baris dari tabel |
-| Merge membawa PR yang ada di daftar "Hindari" (mis. #664) | Upstream mengadopsi PR bermasalah | Setelah merge selesai, revert commit itu (preseden: `9ed5be64`) dan catat di `FORK-CHANGES.md` |
+| Merge membawa PR yang ada di daftar "Hindari" (mis. kasus yang direvert di `9ed5be64`) | Upstream mengadopsi PR bermasalah | Setelah merge selesai, revert commit itu (preseden: `9ed5be64`) dan catat di `FORK-CHANGES.md` |
 | Snapshot test provider gagal setelah merge translator | Snapshot generated memang harus berubah | Regenerate dan commit terpisah `test(baseline): ...` (preseden: `540ebbe68`) |
 | Jumlah test gagal naik di atas baseline 88 | Regresi nyata dari resolusi konflik | Jangan merge ke master; cari resolusi yang salah dengan `git log --oneline --merge -- <file>` dan ulangi |
 | Lupa branch upgrade dan terlanjur merge di `master` | Prosedur tidak diikuti | Selama belum di-push: `git reset --hard origin/master`, lalu ulangi dari [bagian 3](#3-trial-merge-yang-aman) dengan benar. Kalau sudah di-push: koordinasi — jangan force-push `master` tanpa keputusan eksplisit |
