@@ -9,8 +9,10 @@ export async function GET() {
     const withProgress = [];
     for (const k of keys) {
       const p = await getQuotaKeyProgress(k.id);
-      const { key, ...rest } = k;
-      withProgress.push({ ...rest, keyPrefix: key.startsWith("sk-danton-") ? "sk-danton-" + key.slice("sk-danton-".length, "sk-danton-".length + 4) + "…" : key.slice(0, 8) + "…", progress: p });
+      const { key } = k;
+      // Dashboard is auth-protected — expose the full key so the admin can copy it.
+      // The public /check-usage endpoint still returns only the masked prefix.
+      withProgress.push({ ...k, keyPrefix: key.startsWith("sk-danton-") ? "sk-danton-" + key.slice("sk-danton-".length, "sk-danton-".length + 4) + "…" : key.slice(0, 8) + "…", progress: p });
     }
     return NextResponse.json({ keys: withProgress });
   } catch (error) {

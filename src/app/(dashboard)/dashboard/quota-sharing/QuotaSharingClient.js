@@ -11,6 +11,7 @@ export default function QuotaSharingClient() {
   const [editKey, setEditKey] = useState(null);
   const [error, setError] = useState("");
   const [createdKey, setCreatedKey] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -145,6 +146,15 @@ export default function QuotaSharingClient() {
     }
   };
 
+  const copyCardKey = async (k) => {
+    if (!k?.key) return;
+    try {
+      await navigator.clipboard.writeText(k.key);
+      setCopiedId(k.id);
+      setTimeout(() => setCopiedId((cur) => (cur === k.id ? null : cur)), 1500);
+    } catch {}
+  };
+
   if (loading) {
     return (
       <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
@@ -221,8 +231,8 @@ export default function QuotaSharingClient() {
                   </Badge>
                 </div>
 
-                {/* Key prefix */}
-                <div className="font-mono text-xs text-text-muted">{k.keyPrefix}</div>
+                {/* Full key (dashboard is admin-only) */}
+                <div className="font-mono text-xs text-text-main break-all select-all">{k.key}</div>
 
                 {/* Models & Period */}
                 <div className="flex flex-wrap gap-1.5">
@@ -258,7 +268,14 @@ export default function QuotaSharingClient() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 pt-1 border-t border-border-subtle">
+                <div className="flex flex-wrap gap-2 pt-1 border-t border-border-subtle">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyCardKey(k)}
+                  >
+                    {copiedId === k.id ? "✓ Copied" : "Copy"}
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"

@@ -54,7 +54,11 @@ function Chip({ text }) {
     } catch {}
   };
   return (
-    <span onClick={copy} title={`Click to copy: ${text}`} className="b-chip select-all">
+    <span
+      onClick={copy}
+      title={`Click to copy: ${text}`}
+      className={`b-chip select-all ${copied ? "b-chip-pop" : ""}`}
+    >
       {text}
       <CopyIcon copied={copied} />
     </span>
@@ -68,6 +72,23 @@ export default function CheckUsagePage() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [howToTab, setHowToTab] = useState("curl");
+  const [barWidth, setBarWidth] = useState(0);
+
+  const COOKIE_NAME = "qsk";
+  const readCookie = (name) => {
+    if (typeof document === "undefined") return "";
+    const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+    return m ? decodeURIComponent(m[1]) : "";
+  };
+  const writeKeyCookie = (val, resetsAt) => {
+    if (typeof document === "undefined") return;
+    const expires = resetsAt ? new Date(resetsAt) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    document.cookie = `${COOKIE_NAME}=${encodeURIComponent(val)}; expires=${expires.toUTCString()}; path=/check-usage; SameSite=Strict`;
+  };
+  const clearKeyCookie = () => {
+    if (typeof document === "undefined") return;
+    document.cookie = `${COOKIE_NAME}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/check-usage; SameSite=Strict`;
+  };
 
   // Brutalist click-spark — pink particles on any click within the page.
   useEffect(() => {
@@ -91,8 +112,34 @@ export default function CheckUsagePage() {
     return () => document.removeEventListener("click", createSparks);
   }, []);
 
+  // Auto-fill + auto-load a saved quota key from the cookie (once, on mount).
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/immutability */
+  useEffect(() => {
+    const saved = readCookie(COOKIE_NAME);
+    if (saved) {
+      setKey(saved);
+      fetchUsage(saved, { fromCookie: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/immutability */
+
+  // Animate the progress bar from 0 to the target percent whenever a result arrives.
+  useEffect(() => {
+    if (!result) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBarWidth(0);
+      return;
+    }
+    const target = result.percent || 0;
+    setBarWidth(0);
+    const raf = requestAnimationFrame(() => setBarWidth(target));
+    return () => cancelAnimationFrame(raf);
+  }, [result]);
+
   const fetchUsage = async (apiKey, opts = {}) => {
     const isRefresh = opts.refresh || false;
+    const fromCookie = opts.fromCookie || false;
     if (isRefresh) setRefreshing(true);
     else {
       setLoading(true);
@@ -108,8 +155,11 @@ export default function CheckUsagePage() {
       const data = await res.json();
       if (!res.ok || !data.keyValid) {
         setError(data.error || "Invalid quota key");
+        // A stale key from the cookie should not keep auto-loading a broken state.
+        if (fromCookie) clearKeyCookie();
       } else {
         setResult(data);
+        writeKeyCookie(apiKey.trim(), data.resetsAt);
       }
     } catch (err) {
       setError("Failed to fetch usage");
@@ -193,11 +243,11 @@ export default function CheckUsagePage() {
               {/* Header */}
               <div className="flex justify-between items-center gap-3">
                 <div className="min-w-0">
-                  <span className="font-mono font-bold" style={{ color: "hsl(var(--primary))" }}>
-                    {result.keyPrefix}
-                  </span>
-                  <span className="ml-2" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  <span className="font-bold text-lg" style={{ color: "hsl(var(--primary))" }}>
                     {result.name}
+                  </span>
+                  <span className="ml-2 font-mono text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    {result.keyPrefix}
                   </span>
                 </div>
                 <span className={`b-badge ${result.isActive ? "b-badge-ok" : "b-badge-bad"}`}>
@@ -222,17 +272,17 @@ export default function CheckUsagePage() {
                   <span>Token Usage ({result.limitPeriod})</span>
                   <span>{result.percent != null ? `${result.percent}%` : "Unlimited"}</span>
                 </div>
-                <div className="w-full h-4 rounded-md" style={{ border: "2px solid #000", background: "hsl(var(--muted))" }}>
+                <div className="b-progress-track">
                   <div
-                    className="h-full animate-pulse-soft"
-                    style={{ width: `${result.percent || 0}%`, background: barColor, borderRight: result.percent ? "2px solid #000" : "none" }}
+                    className="b-progress-fill"
+                    style={{ width: `${barWidth}%`, background: barColor, borderRight: barWidth ? "2px solid #000" : "none" }}
                   />
                 </div>
-                <p className="text-sm mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+                <p className="text-sm mt-1 font-medium" style={{ color: "hsl(var(--foreground))" }}>
                   {result.tokensUsed?.toLocaleString()} / {result.limit?.toLocaleString() || "∞"} tokens
                 </p>
                 {result.resetsAt && (
-                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  <p className="text-xs mt-0.5" style={{ color: "hsl(var(--foreground))" }}>
                     Resets: {new Date(result.resetsAt).toLocaleString()}
                   </p>
                 )}
@@ -240,22 +290,22 @@ export default function CheckUsagePage() {
 
               {/* Stat grid */}
               <div className="grid grid-cols-3 gap-3 text-sm">
-                <div className="b-card shadow-brutal hover-lift p-3" style={{ background: "hsl(var(--brutal-yellow) / 0.25)" }}>
+                <div className="b-card shadow-brutal hover-lift p-3" style={{ background: "hsl(var(--brutal-yellow) / 0.55)" }}>
                   <p style={{ color: "hsl(var(--muted-foreground))" }}>Total Requests</p>
                   <p className="text-xl font-bold">{(result.totalRequests ?? 0).toLocaleString()}</p>
                   <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>In current {result.limitPeriod} window</p>
                 </div>
-                <div className="b-card shadow-brutal hover-lift p-3" style={{ background: "hsl(var(--brutal-blue) / 0.2)" }}>
+                <div className="b-card shadow-brutal hover-lift p-3" style={{ background: "hsl(var(--brutal-blue) / 0.55)" }}>
                   <p style={{ color: "hsl(var(--muted-foreground))" }}>Total Tokens</p>
                   <p className="text-xl font-bold">{((result.totalTokens?.prompt || 0) + (result.totalTokens?.completion || 0)).toLocaleString()}</p>
                   <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>In: {result.totalTokens?.prompt?.toLocaleString()} | Out: {result.totalTokens?.completion?.toLocaleString()}</p>
                 </div>
-                <div className="b-card shadow-brutal hover-lift p-3" style={{ background: "hsl(var(--brutal-green) / 0.2)" }}>
+                <div className="b-card shadow-brutal hover-lift p-3" style={{ background: "hsl(var(--brutal-green) / 0.55)" }}>
                   <p style={{ color: "hsl(var(--muted-foreground))" }}>Cached Tokens</p>
                   <p className="text-xl font-bold">{result.totalTokens?.cachedRead?.toLocaleString() || 0}</p>
                   <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Read: {result.totalTokens?.cachedRead?.toLocaleString()} | Write: {result.totalTokens?.cachedWrite?.toLocaleString()}</p>
                 </div>
-                <div className="b-card shadow-brutal hover-lift p-3 col-span-3" style={{ background: "hsl(var(--brutal-purple) / 0.2)" }}>
+                <div className="b-card shadow-brutal hover-lift p-3 col-span-3" style={{ background: "hsl(var(--brutal-purple) / 0.55)" }}>
                   <p style={{ color: "hsl(var(--muted-foreground))" }}>Est. Cost</p>
                   <p className="text-xl font-bold">${result.totalTokens?.cost?.toFixed(4) || "0.00"}</p>
                 </div>
@@ -385,6 +435,7 @@ const data = await res.json();`}
                 onClick={() => {
                   setResult(null);
                   setKey("");
+                  clearKeyCookie();
                 }}
                 className="b-btn-ghost flex-1"
               >
