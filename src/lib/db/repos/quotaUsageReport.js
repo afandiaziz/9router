@@ -64,7 +64,6 @@ export async function buildUsageReport(apiKeyRow, progress, db) {
       allowedModels.find((e) => suffixMatch(e.model, m.model));
     return {
       alias: entry?.alias || m.model,
-      model: m.model,
       tokens: m.tokens,
     };
   });
