@@ -36,7 +36,7 @@ Aturan keras:
 
 ## 2. Amankan Bukti Keadaan Gagal
 
-Sebelum mengubah apa pun, beku­kan keadaan gagal — Anda akan membutuhkannya untuk diagnosis dan mungkin untuk membuktikan apa yang terjadi:
+Sebelum mengubah apa pun, bekukan keadaan gagal — Anda akan membutuhkannya untuk diagnosis dan mungkin untuk membuktikan apa yang terjadi:
 
 ```bash
 cd /home/ubuntu/9router
@@ -103,6 +103,7 @@ Pertanyaan kunci: *apakah versi image yang akan dipakai bisa membaca skema DB ta
 
 - Backup pra-migrasi aplikasi ada di `data/db/backups/<label>-<versi>-<timestamp>/` — nama direktorinya mencatat versi aplikasi saat backup dibuat (dari `makeBackupDir` di `src/lib/db/backup.js`). Cocokkan dengan tag image tujuan.
 - Backup manual pra-deploy (`data/db.bak-predeploy-*` dari runbook rilis) dibuat dari skema versi **sebelumnya** — aman dipasangkan dengan rollback image ke versi itu.
+- Backup manual lain dengan pola `data/db.bak-*` (bukti nyata di disk: `db.bak-prefork4-2026-08-10-1442`, `db.bak-prefork5-2026-08-10-1540`) **boleh dipakai hanya bila kompatibel-skema** dengan image tujuan — mis. backup `prefork<N>` dibuat sebelum rilis fork N, sehingga cocok untuk image versi sebelum fork N. Daftar kandidat: `ls -d data/db.bak-*`. Bila ragu soal kompatibilitas, pilih backup yang lebih tua, bukan yang lebih baru.
 - Tidak ada jalur restore otomatis (komentar `src/lib/db/backup.js`: "There is NO automated restore path; recovery is manual") — semua langkah di bawah manual dan harus diverifikasi satu per satu.
 
 ### 4.2 Hentikan penulisan ke DB
@@ -126,7 +127,7 @@ Memindahkan (bukan menghapus) menjaga bukti dan memberi jalan memulihkan data pa
 ### 4.4 Restore dari backup (konsisten DB+WAL+SHM)
 
 ```bash
-cp -a "data/db.bak-predeploy-<timestamp>" data/db
+cp -a "data/db.bak-<label>-<timestamp>" data/db
 ls -la data/db
 ```
 

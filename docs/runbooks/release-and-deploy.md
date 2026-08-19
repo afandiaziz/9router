@@ -80,7 +80,7 @@ git tag -l "v*" | sort -V | tail -5
 git describe --tags master
 ```
 
-Contoh terverifikasi per 2026-08-19: tag terbaru `v0.5.55-fork20`, `git describe` menghasilkan `v0.5.55-fork20-11-geaf80dc47` (11 commit setelah tag). Rilis berikutnya melanjutkan ke `fork21`.
+Contoh terverifikasi per 2026-08-19: tag terbaru `v0.5.55-fork20`. Format output `git describe` adalah `<tag>-<N>-g<hash>` — `N` = jumlah commit setelah tag, `<hash>` = singkatan commit HEAD — sehingga output berbentuk mis. `v0.5.55-fork20-N-g<hash>` dan **angka `N` serta hash-nya terus berubah** setiap ada commit baru (termasuk commit dokumentasi). Jalankan perintahnya; jangan andalkan contoh. Rilis berikutnya melanjutkan ke `fork21`.
 
 ### 1.7 Rencana rollback
 
@@ -134,7 +134,7 @@ Metadata action menghasilkan dua tag untuk image `ghcr.io/afandiaziz/9router` (t
 
 Build hanya untuk platform `linux/amd64`, dengan cache registry `buildcache`, `provenance: false`, `sbom: false`.
 
-**Peringatan `latest` yang basi:** `latest` adalah tag bergerak. Sesaat setelah workflow hijau, registry bisa saja masih menyajikan digest lama karena caching/c propagation, dan `docker compose pull` di VPS bisa mendapat digest lama itu. **Jangan deploy sebelum digest di registry benar-benar berubah.** Bandingkan digest registry dengan digest yang sedang dipakai container ([langkah 3.1](#31-inspeksi-target)). Kalau keduanya sama padahal build baru selesai, tunggu beberapa menit lalu cek ulang — jangan paksa `up -d` berharap image baru kepasang.
+**Peringatan `latest` yang basi:** `latest` adalah tag bergerak. Sesaat setelah workflow hijau, registry bisa saja masih menyajikan digest lama karena propagasi cache registry, dan `docker compose pull` di VPS bisa mendapat digest lama itu. **Jangan deploy sebelum digest di registry benar-benar berubah.** Bandingkan digest registry dengan digest yang sedang dipakai container ([langkah 3.1](#31-inspeksi-target)). Kalau keduanya sama padahal build baru selesai, tunggu beberapa menit lalu cek ulang — jangan paksa `up -d` berharap image baru kepasang.
 
 ### 2.4 Verifikasi digest di registry
 
@@ -166,7 +166,7 @@ docker compose ps
 docker inspect 9router --format '{{.Created}} | {{.Config.Image}} | {{.Image}}'
 ```
 
-Output terverifikasi (contoh nyata): `2026-08-18T18:11:36Z | ghcr.io/afandiaziz/9router:latest | sha256:4bd635...`. Catat tiga nilai ini — setelah deploy, `Created` **harus berubah** dan `Image` (digest) harus sama dengan digest registry dari [langkah 2.4](#24-verifikasi-digest-di-registry).
+Contoh format output (terverifikasi per 2026-08-19): `2026-08-18T18:11:36Z | ghcr.io/afandiaziz/9router:latest | sha256:4bd635...`. **Nilai pada contoh ini hanya ilustrasi berstempel tanggal — jangan pernah mencocokkan atau mengharapkan nilai yang sama.** Yang Anda catat adalah output perintah saat itu juga: tiga nilai ini — setelah deploy, `Created` **harus berubah** dan `Image` (digest) harus sama dengan digest registry dari [langkah 2.4](#24-verifikasi-digest-di-registry).
 
 ### 3.2 Backup DB dan `.env`
 
@@ -181,7 +181,7 @@ ls -la data/db.bak-predeploy-${TS}
 ```
 
 - Salin **seluruh direktori `data/db`**, bukan hanya `data.sqlite`: file `-wal` dan `-shm` adalah bagian dari state SQLite mode WAL; menyalin `data.sqlite` sendirian saat DB aktif bisa menghasilkan backup yang tidak konsisten.
-- `.env` ikut dibackup karena memuat `DB_ENCRYPTION_KEY` — tanpa key ini, DB terenkripsi hasil restore tidak bisa dibaca (handbook bagian 4.3). File backup `.env` memuat secret; jaga permission-nya (`chmod 600 .env.bak-*`) dan jangan pernah menyalinnya ke laptop atau meng-commit-nya.
+- `.env` ikut dibackup karena memuat `DB_ENCRYPTION_KEY` — tanpa key ini, DB terenkripsi hasil restore tidak bisa dibaca (handbook bagian 4.3). Nama `.env.bak-predeploy-${TS}` **sengaja dipasangkan** dengan `db.bak-predeploy-${TS}` memakai timestamp `${TS}` yang sama: key di `.env` harus cocok dengan backup DB pasangannya saat restore ([runbook rollback bagian 4.5](rollback-and-recovery.md#45-pastikan-db_encryption_key-cocok)). File backup `.env` memuat secret; jaga permission-nya (`chmod 600 .env.bak-*`) dan jangan pernah menyalinnya ke laptop atau meng-commit-nya.
 - Verifikasi backup tidak kosong: `ls -la` harus menampilkan `data.sqlite` berukuran wajar beserta pasangan WAL/SHM-nya.
 
 > **Catatan:** backup otomatis aplikasi (`data/db/backups/`) hanya dibuat sebelum migrasi skema dan **mengecualikan** tabel `requestDetails` (komentar di `src/lib/db/backup.js`). Ia bukan pengganti backup pra-deploy di atas.
@@ -196,7 +196,7 @@ docker compose up -d
 
 `docker compose pull` mengambil image `:latest` terbaru dari GHCR; `up -d` membuat ulang container **hanya bila** image atau konfigurasi berubah — dari sinilah pentingnya verifikasi digest di [langkah 2.4](#24-verifikasi-digest-di-registry): kalau `pull` mendapat digest lama, `up -d` tidak membuat container baru dan Anda "deploy" tanpa hasil.
 
-**Kapan berhenti manual diperlukan:** `up -d` sudah menangani stop/recreate untuk pergantian image biasa. Hanya gunakan `docker compose stop 9router` eksplisit bila Anda perlu jendela tulis-DB yang tenang (mis. sebelum restore DB — lihat runbook rollback) atau bila recreate gagal dan perlu diagnosis.
+**Kapan berhenti manual diperlukan:** `up -d` sudah menangani stop/recreate untuk pergantian image biasa. Hanya gunakan `docker compose stop 9router` eksplisit bila Anda perlu jendela tulis-DB yang tenang (mis. sebelum restore DB — lihat runbook rollback), saat **rollback image** ([runbook rollback bagian 3.1](rollback-and-recovery.md#31-hentikan-penulisan-singkat) memakai stop eksplisit dengan alasan yang sama), atau bila recreate gagal dan perlu diagnosis.
 
 ### 3.4 Verifikasi container benar-benar baru
 
