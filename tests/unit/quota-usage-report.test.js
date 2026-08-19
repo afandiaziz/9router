@@ -28,7 +28,7 @@ describe("buildUsageReport", () => {
     expect(report.totalTokens.completion).toBe(45);
     expect(report.totalTokens.cachedRead).toBe(3);
     expect(report.totalTokens.cost).toBeCloseTo(0.25);
-    expect(report.perModel[0].alias).toBe("xai/grok-4.5");
+    expect(report.perModel[0].model).toBe("xai/grok-4.5");
     expect(report.perModel[0].tokens).toBe(105);
   });
 
@@ -46,7 +46,7 @@ describe("buildUsageReport", () => {
       allowedModels: [{ model: "gcli/grok-composer-2.5", alias: "danton/composer-2.5" }],
     };
     const report = await buildUsageReport({ key: "sk-danton-2", name: "g", limitPeriod: "monthly", limit: 1000 }, progress, fakeDb);
-    expect(report.perModel[0].alias).toBe("danton/composer-2.5");
+    expect(report.perModel[0].model).toBe("danton/composer-2.5");
     expect(report.perModel[0].tokens).toBe(150);
   });
 
@@ -66,6 +66,6 @@ describe("buildUsageReport", () => {
       ],
     };
     const report = await buildUsageReport({ key: "sk-danton-3", name: "h", limitPeriod: "monthly", limit: 1000 }, progress, fakeDb);
-    expect(report.perModel[0].alias).toBe("danton/grok-4.5");
+    expect(report.perModel[0].model).toBe("danton/grok-4.5");
   });
 });
