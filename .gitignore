@@ -51,6 +51,9 @@ source/*
 .cursor/*
 docs/*
 !docs/ARCHITECTURE.md
+!docs/FORK-DEVELOPMENT-HANDBOOK.md
+!docs/runbooks/
+!docs/runbooks/*
 test/*
 open-sse/test/*
 RM.vn.md
