@@ -54,6 +54,14 @@ export async function buildUsageReport(apiKeyRow, progress, db) {
   // The "/" boundary keeps this precise: "grok-4.5" won't match "grok-4.5-high",
   // and a bare "4.5" won't match "grok-4.5".
   const allowedModels = progress.allowedModels || [];
+	// Strip the "model" key from each allowedModels entry for the report payload,
+	// without mutating the source progress.allowedModels (still needed above for
+	// suffix matching).
+	const allowedModelsForReport = allowedModels.map((e) => {
+		return {
+			model: e?.alias || e.model,
+		};
+	});
   const suffixMatch = (allowedModel, logged) =>
     allowedModel === logged ||
     allowedModel.endsWith(`/${logged}`) ||
@@ -63,7 +71,7 @@ export async function buildUsageReport(apiKeyRow, progress, db) {
       allowedModels.find((e) => e.model === m.model) ||
       allowedModels.find((e) => suffixMatch(e.model, m.model));
     return {
-      alias: entry?.alias || m.model,
+      model: entry?.alias || m.model,
       tokens: m.tokens,
     };
   });
@@ -84,7 +92,7 @@ export async function buildUsageReport(apiKeyRow, progress, db) {
       cachedWrite,
       cost: Math.round(cost * 10000) / 10000,
     },
-    allowedModels,
+    allowedModels: allowedModelsForReport,
     perModel,
   };
 }
