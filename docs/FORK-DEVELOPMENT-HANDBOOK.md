@@ -193,6 +193,32 @@ Motivasi: instance ini mengelola ribuan koneksi provider (per FORK-CHANGES.md: 3
 - Trial merge di branch + backup branch lebih aman daripada menebak dampak konflik; keputusan konflik didasarkan pada isi file, bukan asumsi (rincian tiga file konflik v0.5.55 ada di [runbooks/upstream-sync.md](runbooks/upstream-sync.md)).
 - Security advisory upstream (GHSA) harus masuk secepatnya; fork yang menunda merge menanggung risiko endpoint lokal terekspos.
 
+### 3.3.5 check-usage redesign, quota copy-key, alias fix, batch upstream (fork21–fork25)
+
+Semua di atas basis v0.5.55. Rincian teknis lengkap ada di [FORK-CHANGES.md](../FORK-CHANGES.md).
+
+| Tag | Isi utama |
+|---|---|
+| `v0.5.55-fork21` | **Redesign brutalist `/check-usage`** (gaya mocasus): CSS scoped `.brutal-scope` (`src/app/check-usage/brutal.css`), border tebal + offset shadow, palet pink/kuning, font Space Grotesk, animasi (float/reveal-up/click-spark/tilt-shake). Logika & kontrak API tidak berubah; halaman publik tetap masked. Merge `a68b9180e`. |
+| `v0.5.55-fork22` | **Fix "Usage by Model" alias**: `buildUsageReport` hanya cocok exact-match, padahal `usageHistory.model` menyimpan model tanpa prefix provider (`grok-composer-2.5`) sementara `allowedModels[].model` menyimpan versi berprefix (`gcli/grok-composer-2.5`) → alias tidak resolve. Tambah **slash-boundary suffix match** setelah exact match. Test: `tests/unit/quota-usage-report.test.js` (`26852a90`). |
+| `v0.5.55-fork23` | Quota copy-key dashboard + polish `/check-usage` (header name-primary, warna terbaca, stat card lebih pekat, chip lebih besar + copy-pop, progress bar fill-grow+shimmer, cookie `qsk` auto-fill+auto-load) + simplify tampilan Usage-by-Model (inline GitHub). |
+| `v0.5.55-fork24` | Refactor payload report: `perModel` entry jadi `{model: alias, tokens}`, `allowedModels` jadi display-only. Test disesuaikan (`f61efcc7`). |
+| `v0.5.55-fork25` | **Batch 16 PR upstream zero-conflict** (antigravity/gemini/oauth/security/providers). Diverifikasi lewat stacked trial-merge + test tiap PR (84 pass/0 fail) + baseline (oauth identik, providers +4 additive). Regen `providers-baseline.json` + `alias-baseline.json`. Merge `bbac8f4f`, regen `e060e49e`. |
+
+**PR fork25 (16):** #3411 #3370 #3369 #3368 #3393 #3366 #3395 #3382 #3359 #3408 #3357 #3379 #3380 #3381 #3396 #3338.
+
+**Di-defer dari fork25** (bukan zero-conflict saat diuji nyata):
+- **#3363 (Nous Research)** — bersih sendiri, tapi konflik saat di-stack dengan #3396 di `open-sse/providers/registry/index.js` (file auto-generated). Selesaikan dengan regen registry.
+- **#3333 (DeepSeek tool dedup)** — merge git bersih, tapi **3 test-nya gagal** karena bergantung pada #3332/#3278 (strip suffix `(max)` sebelum lookup registry) yang tidak ikut di-merge. Bundel dengan batch opencode-go (#3332/#3347) berikutnya.
+
+**Pelajaran:**
+
+- **Alias join key harus tahan prefix.** Bug fork22 lolos ke produksi karena test lama memakai string berprefix di kedua sisi join, jadi mismatch prefix-stripped tak pernah teruji. Saat menulis test resolusi model, pakai bentuk data seperti di produksi (prefix di-strip di sisi log).
+- **Stacked trial-merge > per-PR.** #3363 bersih vs master sendirian tapi konflik saat ditumpuk di atas #3396. Selalu uji tumpukan penuh, bukan hanya tiap PR terhadap master.
+- **Merge git bersih ≠ bebas regresi.** #3333 merge tanpa konflik git tapi test-nya gagal karena dependency transitif ke PR lain. Jalankan test tiap PR pasca-merge, bukan hanya cek konflik.
+- **Build produksi Next bisa OOM di mesin dev.** Verifikasi regresi via test suite + baseline lebih andal daripada full build saat mesin terbatas memori.
+
+
 ### 3.4 Pelajaran lintas-sesi
 
 1. **GHCR `latest` bisa basi.** `latest` hanya berpindah setelah workflow dari tag baru selesai. Deploy sebelum digest registry berubah = menjalankan image lama sambil mengira sudah upgrade. Selalu verifikasi digest/timestamps sebelum `docker compose pull` (lihat [runbooks/release-and-deploy.md](runbooks/release-and-deploy.md)).

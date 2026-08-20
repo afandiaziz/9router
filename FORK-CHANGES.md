@@ -192,6 +192,67 @@ modelStr = result.resolvedModel;   // works
 
 ---
 
+## RILIS v0.5.55-fork21 s/d fork25 — ✅ DEPLOYED (Master)
+
+Basis: v0.5.55 (setelah merge upstream fork20). Semua fitur fork sendiri kecuali fork25 (batch PR upstream).
+
+### fork21 — Redesign brutalist `/check-usage` (gaya mocasus)
+
+Reskin halaman publik `/check-usage` ke desain neo-brutalist (referensi `mocasus.my.id`). Terisolasi penuh, tidak menyentuh dashboard.
+
+| Aspek | Keterangan |
+|-------|-----------|
+| CSS scoped | File baru `src/app/check-usage/brutal.css`, semua rule di bawah `.brutal-scope` — nol kebocoran ke dashboard (dark theme tak terpengaruh). |
+| Visual | Background cream, border hitam `2px`, offset shadow `4px 4px 0 #000`, primary pink, aksen kuning, font Space Grotesk / Plus Jakarta Sans. Selalu light. |
+| Animasi | float (hero), reveal-up (kartu), pulse-soft, spin (refresh), tilt-shake (hover), click-spark (pink particle saat klik). Semua dijaga `prefers-reduced-motion`. |
+| Kontrak | Logika React + `POST /api/public/check-usage` tidak berubah 1:1. Guest tetap hanya menerima `keyPrefix` bertopeng. |
+
+Merge `a68b9180e`. Verifikasi: eslint 0, render HTTP 200, final review PASS.
+
+### fork22 — Fix "Usage by Model" menampilkan alias (root cause: prefix mismatch)
+
+**Gejala:** section "Usage by Model" menampilkan nama model asli (`grok-composer-2.5`), bukan alias (`danton/composer-2.5`), padahal alias sudah di-set.
+
+**Root cause (dikonfirmasi dari DB produksi):** `buildUsageReport` (`src/lib/db/repos/quotaUsageReport.js`) mencocokkan `allowedModels.find(e => e.model === m.model)` secara exact. Tapi:
+- `usageHistory.model` mencatat model **tanpa prefix** provider → `grok-composer-2.5`
+- `allowedModels[].model` menyimpan **berprefix** → `gcli/grok-composer-2.5`
+- exact match gagal → `entry` undefined → alias jatuh ke nama model.
+
+Test lama tak menangkapnya karena memakai string berprefix di kedua sisi.
+
+**Fix:** exact match dulu, lalu **slash-boundary suffix match** (`allowed.endsWith("/"+logged)` / sebaliknya). Batasan `/` menjaga presisi: `grok-4.5` tidak cocok `grok-4.5-high`, `4.5` tidak cocok `grok-4.5`; menangani prefix multi-segmen (`vertex/google/gemini-2.5-pro`). Test: `tests/unit/quota-usage-report.test.js` (3 kasus baru). Commit `26852a90`.
+
+### fork23 — Quota copy-key dashboard + polish `/check-usage`
+
+| Area | Perubahan |
+|------|-----------|
+| Dashboard Quota Sharing | `GET /api/quota-keys` (auth-only) kini kirim key penuh; kartu menampilkan key penuh (tak bertopeng) + tombol **Copy** per kartu. Guest `/check-usage` tetap masked (tidak disentuh). |
+| `/check-usage` header | Emphasis swap: `name` jadi primary (pink bold), `keyPrefix` jadi muted/mono. |
+| Warna | `tokensUsed`/`limit` + `resetsAt` dari muted → foreground (terbaca); 4 stat card dari pastel `0.2` → `0.55` (lebih nyala). |
+| Chip | Allowed-model chip diperbesar `0.75rem` → `0.9rem` + animasi copy-pop (rubber-band scale) saat klik-copy. |
+| Progress bar | Ganti `animate-pulse-soft` (opacity) → **fill-grow** (0→target via `barWidth` state + transition) + **shimmer** diagonal (`::after`). |
+| Cookie | `qsk` (path `/check-usage`, SameSite=Strict, expiry = `resetsAt` else +30 hari). Auto-fill + auto-load saat kunjungan berikutnya; bersih saat key stale / "Check Another Key". |
+
+Ditambah simplify tampilan Usage-by-Model (inline via GitHub: buang sub-label `(model)`, tokens mono).
+
+### fork24 — Refactor payload report
+
+`perModel` entry jadi `{model: <alias-resolved>, tokens}` (field `alias` dilebur ke `model`); `allowedModels` di report jadi display-only `{model: <alias-or-name>}`. Frontend tetap jalan karena baca `m.alias || m.model` (fallback ke `m.model`). Test disesuaikan. Commit `f61efcc7`.
+
+### fork25 — Batch 16 PR upstream (zero-conflict)
+
+Diambil dari 50 PR terbaru `decolua/9router`, diprioritaskan yang nol/minim konflik. Diverifikasi lewat **stacked trial-merge** (bukan hanya per-PR vs master) + test tiap PR (84 pass / 0 fail) + baseline (OAuth byte-identik; providers `+4` additive).
+
+**16 PR:** #3411 (gemini schema 400), #3370 (SSRF IPv6 🔒), #3369 (tool-result id), #3368 (CLI heap), #3393 (dashboard crash <8 char), #3366 (antigravity empty parts), #3395 (antigravity image aspect ratio), #3382 (Gemini 3.7 Flash defaultModels), #3359 (Hermes prompt sanitization), #3408 (commandcode thinking suffix), #3357 (codebuddy-intl system prompt), #3379 (Cline OAuth), #3380 (OIDC SSO), #3381 (credential store owner-only 🔒), #3396 (provider Reasonix/OVH/JoyCode/OpenModel), #3338 (rtk lang detect).
+
+Merge `bbac8f4f`; regen baseline `e060e49e` (`providers-baseline.json` + `alias-baseline.json` untuk 4 provider baru).
+
+**Di-defer** (bukan zero-conflict saat diuji nyata, untuk batch berikutnya):
+- **#3363 (Nous Research)** — konflik saat di-stack dengan #3396 di `registry/index.js` (auto-generated; selesaikan via regen).
+- **#3333 (DeepSeek tool dedup)** — merge git bersih, tapi 3 test-nya gagal karena butuh #3332/#3278 (strip suffix `(max)`) yang tidak ikut. Bundel dengan #3332/#3347.
+
+---
+
 ## PERUBAHAN MILIK FORK (Bukan dari Upstream)
 
 
