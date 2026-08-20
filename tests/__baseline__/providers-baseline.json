@@ -1008,5 +1008,24 @@
       "preserveCacheControl": true
     },
     "format": "openai"
+  },
+  "reasonix": {
+    "baseUrl": "https://api.reasonix.ai/v1/chat/completions",
+    "validateUrl": "https://api.reasonix.ai/v1/models",
+    "format": "openai"
+  },
+  "ovh": {
+    "baseUrl": "https://ai.endpoints.ovh.com/v1/chat/completions",
+    "validateUrl": "https://ai.endpoints.ovh.com/v1/models",
+    "format": "openai"
+  },
+  "joycode": {
+    "baseUrl": "https://api.joycode.jd.com/v1/chat/completions",
+    "validateUrl": "https://api.joycode.jd.com/v1/models",
+    "format": "openai"
+  },
+  "openmodel": {
+    "baseUrl": "https://api.openmodel.ai/v1/chat/completions",
+    "format": "openai"
   }
 }
