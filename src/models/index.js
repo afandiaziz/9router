@@ -27,6 +27,7 @@ export {
   getModelAliases,
   setModelAlias,
   deleteModelAlias,
+  deleteModelAliasesByProvider,
   getCustomModels,
   addCustomModel,
   deleteCustomModel,
