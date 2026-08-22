@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   getModelAliases: vi.fn(),
   getDisabledModels: vi.fn(),
   getCapsOverrides: vi.fn(),
+  getSettings: vi.fn(),
+  getQuotaKeyByFullKey: vi.fn(),
 }));
 
 vi.mock("next/server", () => ({
@@ -19,6 +21,8 @@ vi.mock("@/lib/localDb", () => ({
   getCombos: mocks.getCombos,
   getCustomModels: mocks.getCustomModels,
   getModelAliases: mocks.getModelAliases,
+  getSettings: mocks.getSettings,
+  getQuotaKeyByFullKey: mocks.getQuotaKeyByFullKey,
 }));
 
 vi.mock("@/lib/disabledModelsDb", () => ({
@@ -42,6 +46,8 @@ describe("GET /v1/models — caps overrides and model aliases", () => {
     mocks.getModelAliases.mockResolvedValue({});
     mocks.getDisabledModels.mockResolvedValue({});
     mocks.getCapsOverrides.mockResolvedValue({});
+    mocks.getSettings.mockResolvedValue({ requireApiKey: false });
+    mocks.getQuotaKeyByFullKey.mockResolvedValue(null);
   });
 
   it("applies capability overrides to context_length and capabilities in /v1/models", async () => {

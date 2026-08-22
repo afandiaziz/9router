@@ -354,6 +354,12 @@
       "type": "file"
     },
     {
+      "path": "src",
+      "accessCount": 8,
+      "lastAccessed": 1787440892925,
+      "type": "directory"
+    },
+    {
       "path": "src/app/(dashboard)/dashboard/quota-sharing/QuotaSharingClient.js",
       "accessCount": 6,
       "lastAccessed": 1787161678799,
@@ -478,6 +484,12 @@
       "accessCount": 2,
       "lastAccessed": 1787164647114,
       "type": "directory"
+    },
+    {
+      "path": "src/sse/handlers/chat.js",
+      "accessCount": 2,
+      "lastAccessed": 1787440901132,
+      "type": "file"
     },
     {
       "path": "C:/Users/afand/AppData/Local/Temp/claude/D-----9router-fork/c51ccb13-b84b-4c79-9e7d-047ecb7ed505/tasks/bdeznv5hc.output",
@@ -612,12 +624,6 @@
       "type": "file"
     },
     {
-      "path": "src",
-      "accessCount": 1,
-      "lastAccessed": 1787161944044,
-      "type": "directory"
-    },
-    {
       "path": ".superpowers/sdd/2026-08-20-quota-checkusage-enhancements/review-0d57c688..9f9c9a97.diff",
       "accessCount": 1,
       "lastAccessed": 1787162031398,
@@ -627,12 +633,6 @@
       "path": "src/app/(dashboard)/dashboard/quota-sharing/QuotaModelPicker.js",
       "accessCount": 1,
       "lastAccessed": 1787164670481,
-      "type": "file"
-    },
-    {
-      "path": "src/sse/handlers/chat.js",
-      "accessCount": 1,
-      "lastAccessed": 1787164763697,
       "type": "file"
     },
     {
