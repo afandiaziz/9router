@@ -30,6 +30,7 @@ export {
   deleteModelAliasesByProvider,
   getCustomModels,
   addCustomModel,
+  addCustomModelsBulk,
   deleteCustomModel,
   getMitmAlias,
   setMitmAliasAll,

@@ -69,6 +69,7 @@ function writeJsonFile(sessionPath, filename, data) {
   }
 }
 
+<<<<<<< HEAD
 const SENSITIVE_HEADER_PATTERNS = [
   "authorization",
   "proxy-authorization",
@@ -112,6 +113,29 @@ export function maskSensitiveHeaders(headers) {
     if (SENSITIVE_HEADER_PATTERNS.some(pattern => lowerKey.includes(pattern))) {
       masked[key] = maskHeaderValue(masked[key]);
     }
+=======
+// Mask credentials in headers. Request logs are written to disk unredacted
+// otherwise, so an enabled ENABLE_REQUEST_LOGS persists provider OAuth tokens
+// and client API keys in plaintext for as long as the log folder survives.
+function maskSensitiveHeaders(headers) {
+  if (!headers) return {};
+  const masked = { ...headers };
+  const sensitiveKeys = ["authorization", "x-api-key", "api-key", "cookie", "token", "secret"];
+
+  for (const key of Object.keys(masked)) {
+    const lowerKey = key.toLowerCase();
+    if (!sensitiveKeys.some(sk => lowerKey.includes(sk))) continue;
+    const value = masked[key];
+    if (typeof value !== "string" || !value) continue;
+
+    // Keep the auth scheme so logs still show which auth path ran, plus the last
+    // 4 chars to tell two credentials apart — never the secret itself. Short
+    // values are masked too: a 12-char key is no less sensitive than a 40-char one.
+    const parts = value.match(/^(\S+)\s+(.*)$/);
+    const scheme = parts && /^(bearer|basic|token)$/i.test(parts[1]) ? `${parts[1]} ` : "";
+    const secret = scheme ? parts[2] : value;
+    masked[key] = `${scheme}***${secret.length > 4 ? secret.slice(-4) : ""}`;
+>>>>>>> pr-3032
   }
 
   return masked;

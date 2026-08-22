@@ -91,3 +91,7 @@ graphify-out/*
 .next-analyze/*
 
 .worktrees/
+# Local-only wiki (LLM Wiki Compiler)
+wiki/
+.wiki-compiler.json
+wiki-log.md
