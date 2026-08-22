@@ -1,0 +1,39 @@
+diff --git a/src/mitm/server.js b/src/mitm/server.js
+index 2c5c876ac8..fb49539dba 100644
+--- a/src/mitm/server.js
++++ b/src/mitm/server.js
+@@ -366,6 +366,15 @@ const server = https.createServer(sslOptions, async (req, res) => {
+       return passthrough(req, res, bodyBuffer);
+     }
+ 
++    // Antigravity chat endpoints already have a native Gemini-compatible route at
++    // /v1beta/models/[...path]. Intercepting them here and piping OpenAI SSE back to
++    // the Google client breaks the SDK parser (proto/textproto expects Gemini SSE / JSON,
++    // not OpenAI chat-completions chunks). Keep MITM for DNS/TLS passthrough, but let the
++    // upstream Gemini route handle request/response translation.
++    if (tool === "antigravity") {
++      return passthrough(req, res, bodyBuffer);
++    }
++
+     return handlers[tool].intercept(req, res, bodyBuffer, mappedModel, passthrough);
+   } catch (e) {
+     err(`Unhandled error: ${e.message}`);
+diff --git a/tests/unit/antigravity-mitm-bypass.test.js b/tests/unit/antigravity-mitm-bypass.test.js
+new file mode 100644
+index 0000000000..c360a687f2
+--- /dev/null
++++ b/tests/unit/antigravity-mitm-bypass.test.js
+@@ -0,0 +1,13 @@
++import { describe, expect, it } from "vitest";
++import fs from "fs";
++import path from "path";
++
++const serverPath = path.resolve(process.cwd(), "../src/mitm/server.js");
++const source = fs.readFileSync(serverPath, "utf8");
++
++describe("Antigravity MITM routing", () => {
++  it("bypasses the legacy antigravity interceptor after model mapping", () => {
++    expect(source).toContain('if (tool === "antigravity") {');
++    expect(source).toContain('return passthrough(req, res, bodyBuffer);');
++  });
++});
