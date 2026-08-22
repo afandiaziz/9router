@@ -1,0 +1,7 @@
+{
+  "tool_name": "Read",
+  "tool_input_preview": "{\"file_path\":\"D:\\\\__9router-fork\\\\src\\\\app\\\\api\\\\v1\\\\models\\\\route.js\",\"offset\":490,\"limit\":40}",
+  "error": "File does not exist. Note: your current working directory is D:\\_\\_9router-fork.",
+  "timestamp": "2026-08-22T17:41:21.651Z",
+  "retry_count": 1
+}

@@ -1,0 +1,280 @@
+{
+  "version": 1,
+  "jobId": "d867204d-21dd-4a7f-94be-717549ecd358",
+  "sessionId": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+  "scopeKey": "e0d8a77e86613032d3bb086450fab410f1bc612e7ac7ebb3afa2b0d18f78e709",
+  "revision": 15,
+  "createdAt": "2026-08-19T20:02:01.796Z",
+  "updatedAt": "2026-08-20T06:24:59.809Z",
+  "producerGraceExpiresAt": "2026-08-19T20:02:31.798Z",
+  "bestEffortDeadlineAt": "2026-08-19T20:03:22.798Z",
+  "producers": {
+    "core": {
+      "state": "sealed",
+      "intentKey": "f29d7e2c203c12a9c9a84d7faf8675627828d6fd072e68143ab8bf4e4f678dff",
+      "payloadDigest": "f29d7e2c203c12a9c9a84d7faf8675627828d6fd072e68143ab8bf4e4f678dff",
+      "sealedAt": "2026-08-19T20:02:02.553Z",
+      "sealedBy": "foreground"
+    },
+    "wiki": {
+      "state": "no-op",
+      "sealedAt": "2026-08-19T20:02:01.796Z",
+      "sealedBy": "wiki-producer"
+    }
+  },
+  "actions": {
+    "foreground-cleanup": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "completed",
+      "attempts": 0,
+      "idempotencyKey": "febf6dba2f2536433960a07f7cedce72e946b43ced0896570df80f017b8914d2",
+      "payload": {
+        "transcriptPath": "C:\\Users\\afand\\.claude\\projects\\D-----9router-fork\\43a25196-b784-4b4e-a1ad-437adf6fdcd3.jsonl",
+        "cwd": "D:\\_\\_9router-fork",
+        "reason": "resume",
+        "input": {
+          "session_id": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+          "transcript_path": "C:\\Users\\afand\\.claude\\projects\\D-----9router-fork\\43a25196-b784-4b4e-a1ad-437adf6fdcd3.jsonl",
+          "cwd": "D:\\_\\_9router-fork",
+          "prompt_id": "2a064368-4385-42ef-a2b0-cb25b44496c7",
+          "hook_event_name": "SessionEnd",
+          "reason": "resume"
+        },
+        "metrics": {
+          "session_id": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+          "ended_at": "2026-08-19T20:02:01.758Z",
+          "reason": "resume",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        },
+        "initialTeamNames": [],
+        "openClawEnabled": false,
+        "openClawRouting": {},
+        "foregroundResult": {
+          "removedTransientFiles": 2,
+          "completedAt": "2026-08-19T20:02:02.550Z"
+        }
+      },
+      "budgetMs": 9000,
+      "completedAt": "2026-08-19T20:02:02.553Z",
+      "lastOutcomeCode": "completed"
+    },
+    "wiki-capture": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "completed",
+      "attempts": 0,
+      "idempotencyKey": "1719cd1ef5b51e0269b78c4cb8c9308c9c1f7b82fd1c067fc034c060f23863f5",
+      "payload": {},
+      "budgetMs": 9000,
+      "completedAt": "2026-08-19T20:02:01.796Z"
+    },
+    "team-cleanup": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "expired",
+      "attempts": 0,
+      "idempotencyKey": "cee6ac31df545408e1e822247ac249b3f8182a98a5fe8e448ae3b251e55bdee1",
+      "payload": {
+        "transcriptPath": "C:\\Users\\afand\\.claude\\projects\\D-----9router-fork\\43a25196-b784-4b4e-a1ad-437adf6fdcd3.jsonl",
+        "cwd": "D:\\_\\_9router-fork",
+        "reason": "resume",
+        "input": {
+          "session_id": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+          "transcript_path": "C:\\Users\\afand\\.claude\\projects\\D-----9router-fork\\43a25196-b784-4b4e-a1ad-437adf6fdcd3.jsonl",
+          "cwd": "D:\\_\\_9router-fork",
+          "prompt_id": "2a064368-4385-42ef-a2b0-cb25b44496c7",
+          "hook_event_name": "SessionEnd",
+          "reason": "resume"
+        },
+        "metrics": {
+          "session_id": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+          "ended_at": "2026-08-19T20:02:01.758Z",
+          "reason": "resume",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        },
+        "initialTeamNames": [],
+        "openClawEnabled": false,
+        "openClawRouting": {}
+      },
+      "budgetMs": 9000,
+      "lastOutcomeCode": "required-deadline-expired"
+    },
+    "python-cleanup": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "expired",
+      "attempts": 0,
+      "idempotencyKey": "1f1370c4ac056606059d517e2f106b602d8cbcb04587b3fcc5f3b9f89e649cd0",
+      "payload": {
+        "transcriptPath": "C:\\Users\\afand\\.claude\\projects\\D-----9router-fork\\43a25196-b784-4b4e-a1ad-437adf6fdcd3.jsonl",
+        "cwd": "D:\\_\\_9router-fork",
+        "reason": "resume",
+        "input": {
+          "session_id": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+          "transcript_path": "C:\\Users\\afand\\.claude\\projects\\D-----9router-fork\\43a25196-b784-4b4e-a1ad-437adf6fdcd3.jsonl",
+          "cwd": "D:\\_\\_9router-fork",
+          "prompt_id": "2a064368-4385-42ef-a2b0-cb25b44496c7",
+          "hook_event_name": "SessionEnd",
+          "reason": "resume"
+        },
+        "metrics": {
+          "session_id": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+          "ended_at": "2026-08-19T20:02:01.758Z",
+          "reason": "resume",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        },
+        "initialTeamNames": [],
+        "openClawEnabled": false,
+        "openClawRouting": {}
+      },
+      "budgetMs": 9000,
+      "lastOutcomeCode": "required-deadline-expired"
+    },
+    "reply-cleanup": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "expired",
+      "attempts": 0,
+      "idempotencyKey": "0b3a8b47c28b26d56aca004d4f572b96c118f16819c0d35162418816f9a5420a",
+      "payload": {
+        "transcriptPath": "C:\\Users\\afand\\.claude\\projects\\D-----9router-fork\\43a25196-b784-4b4e-a1ad-437adf6fdcd3.jsonl",
+        "cwd": "D:\\_\\_9router-fork",
+        "reason": "resume",
+        "input": {
+          "session_id": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+          "transcript_path": "C:\\Users\\afand\\.claude\\projects\\D-----9router-fork\\43a25196-b784-4b4e-a1ad-437adf6fdcd3.jsonl",
+          "cwd": "D:\\_\\_9router-fork",
+          "prompt_id": "2a064368-4385-42ef-a2b0-cb25b44496c7",
+          "hook_event_name": "SessionEnd",
+          "reason": "resume"
+        },
+        "metrics": {
+          "session_id": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+          "ended_at": "2026-08-19T20:02:01.758Z",
+          "reason": "resume",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        },
+        "initialTeamNames": [],
+        "openClawEnabled": false,
+        "openClawRouting": {}
+      },
+      "budgetMs": 9000,
+      "lastOutcomeCode": "required-deadline-expired"
+    },
+    "callback": {
+      "class": "best-effort",
+      "phase": "deferred-best-effort",
+      "status": "expired",
+      "attempts": 0,
+      "idempotencyKey": "d068ede2655bf89e0c0950e087d0603d7dcf45538e94f20a654d08c6f4841895",
+      "payload": {
+        "transcriptPath": "C:\\Users\\afand\\.claude\\projects\\D-----9router-fork\\43a25196-b784-4b4e-a1ad-437adf6fdcd3.jsonl",
+        "cwd": "D:\\_\\_9router-fork",
+        "reason": "resume",
+        "input": {
+          "session_id": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+          "transcript_path": "C:\\Users\\afand\\.claude\\projects\\D-----9router-fork\\43a25196-b784-4b4e-a1ad-437adf6fdcd3.jsonl",
+          "cwd": "D:\\_\\_9router-fork",
+          "prompt_id": "2a064368-4385-42ef-a2b0-cb25b44496c7",
+          "hook_event_name": "SessionEnd",
+          "reason": "resume"
+        },
+        "metrics": {
+          "session_id": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+          "ended_at": "2026-08-19T20:02:01.758Z",
+          "reason": "resume",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        },
+        "initialTeamNames": [],
+        "openClawEnabled": false,
+        "openClawRouting": {}
+      },
+      "budgetMs": 2000,
+      "lastOutcomeCode": "deadline-expired"
+    },
+    "notification": {
+      "class": "best-effort",
+      "phase": "deferred-best-effort",
+      "status": "expired",
+      "attempts": 0,
+      "idempotencyKey": "89c0438ff63097ce04beb60efb87292ff68a7af350a0ee331f3de9dbf42d62fc",
+      "payload": {
+        "transcriptPath": "C:\\Users\\afand\\.claude\\projects\\D-----9router-fork\\43a25196-b784-4b4e-a1ad-437adf6fdcd3.jsonl",
+        "cwd": "D:\\_\\_9router-fork",
+        "reason": "resume",
+        "input": {
+          "session_id": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+          "transcript_path": "C:\\Users\\afand\\.claude\\projects\\D-----9router-fork\\43a25196-b784-4b4e-a1ad-437adf6fdcd3.jsonl",
+          "cwd": "D:\\_\\_9router-fork",
+          "prompt_id": "2a064368-4385-42ef-a2b0-cb25b44496c7",
+          "hook_event_name": "SessionEnd",
+          "reason": "resume"
+        },
+        "metrics": {
+          "session_id": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+          "ended_at": "2026-08-19T20:02:01.758Z",
+          "reason": "resume",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        },
+        "initialTeamNames": [],
+        "openClawEnabled": false,
+        "openClawRouting": {}
+      },
+      "budgetMs": 2000,
+      "lastOutcomeCode": "deadline-expired"
+    },
+    "openclaw": {
+      "class": "best-effort",
+      "phase": "deferred-best-effort",
+      "status": "expired",
+      "attempts": 0,
+      "idempotencyKey": "31fe8f6e1cf204e27006de511df257326fdd98655122ca437013e8779ffc735b",
+      "payload": {
+        "transcriptPath": "C:\\Users\\afand\\.claude\\projects\\D-----9router-fork\\43a25196-b784-4b4e-a1ad-437adf6fdcd3.jsonl",
+        "cwd": "D:\\_\\_9router-fork",
+        "reason": "resume",
+        "input": {
+          "session_id": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+          "transcript_path": "C:\\Users\\afand\\.claude\\projects\\D-----9router-fork\\43a25196-b784-4b4e-a1ad-437adf6fdcd3.jsonl",
+          "cwd": "D:\\_\\_9router-fork",
+          "prompt_id": "2a064368-4385-42ef-a2b0-cb25b44496c7",
+          "hook_event_name": "SessionEnd",
+          "reason": "resume"
+        },
+        "metrics": {
+          "session_id": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+          "ended_at": "2026-08-19T20:02:01.758Z",
+          "reason": "resume",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        },
+        "initialTeamNames": [],
+        "openClawEnabled": false,
+        "openClawRouting": {}
+      },
+      "budgetMs": 2000,
+      "lastOutcomeCode": "deadline-expired"
+    }
+  },
+  "owner": null,
+  "phase": "complete",
+  "completion": {
+    "completedAt": "2026-08-20T06:24:59.779Z",
+    "terminalDigest": "ddabc1913b3116dc6b89d34adddc02236af5e235cccb5d7bb4c05bb704268751",
+    "terminalRevision": 14
+  }
+}

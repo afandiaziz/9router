@@ -1,0 +1,30 @@
+diff --git a/open-sse/providers/shared.js b/open-sse/providers/shared.js
+index fdd76c4077..8208259c4e 100644
+--- a/open-sse/providers/shared.js
++++ b/open-sse/providers/shared.js
+@@ -74,10 +74,10 @@ export const KIMI_CODING_BASE_URL = "https://api.kimi.com/coding/v1/messages";
+ export const OPENAI_COMPAT_BASE = "https://api.openai.com/v1";
+ export const ANTHROPIC_COMPAT_BASE = "https://api.anthropic.com/v1";
+ 
+-// Official Antigravity IDE Desktop 2.1.1 fingerprint captured from macOS arm64.
++// Official Antigravity IDE Desktop 2.5.5 fingerprint captured from macOS arm64.
+ // Keep this static even when 9router runs on Linux: the provider profile is
+ // intentionally matching the IDE client, not the server host.
+-export const ANTIGRAVITY_IDE_VERSION = "2.1.1";
++export const ANTIGRAVITY_IDE_VERSION = "2.5.5";
+ export const ANTIGRAVITY_IDE_BASE_URL = "https://daily-cloudcode-pa.googleapis.com";
+ export const ANTIGRAVITY_IDE_USER_AGENT = `antigravity/ide/${ANTIGRAVITY_IDE_VERSION} darwin/arm64`;
+ 
+diff --git a/tests/unit/antigravity-usage-headers.test.js b/tests/unit/antigravity-usage-headers.test.js
+index 960875525f..bbacc085a5 100644
+--- a/tests/unit/antigravity-usage-headers.test.js
++++ b/tests/unit/antigravity-usage-headers.test.js
+@@ -23,7 +23,7 @@ describe("Antigravity usage headers", () => {
+ 
+     expect(proxyAwareFetch).toHaveBeenCalledTimes(2);
+     for (const [, options] of proxyAwareFetch.mock.calls) {
+-      expect(options.headers["User-Agent"]).toBe("antigravity/ide/2.1.1 darwin/arm64");
++      expect(options.headers["User-Agent"]).toBe("antigravity/ide/2.5.5 darwin/arm64");
+       expect(options.headers).not.toHaveProperty("x-request-source");
+     }
+   });

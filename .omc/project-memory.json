@@ -1,0 +1,646 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1787419480670,
+  "projectRoot": "D:\\_\\_9router-fork",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "JavaScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "jsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "express",
+        "version": "5.2.1",
+        "category": "backend"
+      },
+      {
+        "name": "next",
+        "version": "16.1.6",
+        "category": "fullstack"
+      },
+      {
+        "name": "react",
+        "version": "19.2.4",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "19.2.4",
+        "category": "frontend"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "next dev --port 20127",
+      "dev:webpack": "next dev --webpack --port 20127",
+      "build": "next build --webpack",
+      "postbuild": "node scripts/copy-standalone-assets.mjs",
+      "postbuild:bun": "node scripts/copy-standalone-assets.mjs",
+      "start": "node custom-server.js --port 20127",
+      "dev:bun": "bun --bun next dev --webpack --port 20127",
+      "build:bun": "bun --bun next build --webpack",
+      "start:bun": "bun ./.next/standalone/custom-server.js",
+      "cli:pack": "npm --prefix cli run pack:cli",
+      "cli:publish": "npm --prefix cli run publish:cli"
+    }
+  },
+  "conventions": {
+    "namingStyle": "camelCase",
+    "importStyle": "ES modules",
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "docs",
+      "public",
+      "scripts",
+      "src",
+      "tests"
+    ],
+    "gitBranches": {
+      "defaultBranch": "master",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "cli": {
+      "path": "cli",
+      "purpose": null,
+      "fileCount": 6,
+      "lastAccessed": 1787419479488,
+      "keyFiles": [
+        "cli.js",
+        "LICENSE",
+        "package.json",
+        "README.md"
+      ]
+    },
+    "data": {
+      "path": "data",
+      "purpose": "Data files",
+      "fileCount": 1,
+      "lastAccessed": 1787419479506,
+      "keyFiles": [
+        "machine-id"
+      ]
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 2,
+      "lastAccessed": 1787419479507,
+      "keyFiles": [
+        "ARCHITECTURE.md",
+        "FORK-DEVELOPMENT-HANDBOOK.md"
+      ]
+    },
+    "gitbook": {
+      "path": "gitbook",
+      "purpose": null,
+      "fileCount": 5,
+      "lastAccessed": 1787419479508,
+      "keyFiles": [
+        "jsconfig.json",
+        "next.config.mjs",
+        "package.json",
+        "postcss.config.mjs"
+      ]
+    },
+    "i18n": {
+      "path": "i18n",
+      "purpose": null,
+      "fileCount": 10,
+      "lastAccessed": 1787419479523,
+      "keyFiles": [
+        "README.es.md",
+        "README.fa_IR.md",
+        "README.fr.md",
+        "README.id-ID.md",
+        "README.ja-JP.md"
+      ]
+    },
+    "images": {
+      "path": "images",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1787419479525,
+      "keyFiles": [
+        "9router.png",
+        "fusion-combo-ui.png"
+      ]
+    },
+    "open-sse": {
+      "path": "open-sse",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1787419479526,
+      "keyFiles": [
+        "AGENTS.md",
+        "index.js"
+      ]
+    },
+    "public": {
+      "path": "public",
+      "purpose": "Public files",
+      "fileCount": 7,
+      "lastAccessed": 1787419479527,
+      "keyFiles": [
+        "favicon.svg",
+        "file.svg",
+        "globe.svg",
+        "next.svg",
+        "sw.js"
+      ]
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 6,
+      "lastAccessed": 1787419479528,
+      "keyFiles": [
+        "copy-standalone-assets.mjs",
+        "injectDisplayToRegistry.mjs",
+        "migrate-registry.mjs",
+        "test-combo-autoswitch.mjs",
+        "test-gemini-tool-response-sanitization.mjs"
+      ]
+    },
+    "skills": {
+      "path": "skills",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1787419479528,
+      "keyFiles": [
+        "README.md"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 3,
+      "lastAccessed": 1787419479528,
+      "keyFiles": [
+        "dashboardGuard.js",
+        "instrumentation.js",
+        "proxy.js"
+      ]
+    },
+    "tests": {
+      "path": "tests",
+      "purpose": "Test files",
+      "fileCount": 5,
+      "lastAccessed": 1787419479529,
+      "keyFiles": [
+        "package-lock.json",
+        "package.json",
+        "README.md",
+        "vitest.config.js"
+      ]
+    },
+    "cli\\scripts": {
+      "path": "cli\\scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 2,
+      "lastAccessed": 1787419479529,
+      "keyFiles": [
+        "build-cli.js",
+        "buildMitm.js"
+      ]
+    },
+    "cli\\src": {
+      "path": "cli\\src",
+      "purpose": "Source code",
+      "fileCount": 0,
+      "lastAccessed": 1787419479532,
+      "keyFiles": []
+    },
+    "data\\bin": {
+      "path": "data\\bin",
+      "purpose": "Executable scripts",
+      "fileCount": 1,
+      "lastAccessed": 1787419479533,
+      "keyFiles": [
+        "cloudflared"
+      ]
+    },
+    "gitbook\\app": {
+      "path": "gitbook\\app",
+      "purpose": "Application code",
+      "fileCount": 3,
+      "lastAccessed": 1787419479579,
+      "keyFiles": [
+        "globals.css",
+        "layout.js",
+        "page.js"
+      ]
+    },
+    "gitbook\\components": {
+      "path": "gitbook\\components",
+      "purpose": "UI components",
+      "fileCount": 6,
+      "lastAccessed": 1787419479623,
+      "keyFiles": [
+        "DocsContent.js",
+        "DocsHeader.js",
+        "DocsLayout.js"
+      ]
+    },
+    "gitbook\\lib": {
+      "path": "gitbook\\lib",
+      "purpose": "Library code",
+      "fileCount": 1,
+      "lastAccessed": 1787419479646,
+      "keyFiles": [
+        "content.js"
+      ]
+    },
+    "open-sse\\config": {
+      "path": "open-sse\\config",
+      "purpose": "Configuration files",
+      "fileCount": 15,
+      "lastAccessed": 1787419479812,
+      "keyFiles": [
+        "appConstants.js",
+        "codexInstructions.js",
+        "constants.js"
+      ]
+    },
+    "open-sse\\services": {
+      "path": "open-sse\\services",
+      "purpose": "Business logic services",
+      "fileCount": 17,
+      "lastAccessed": 1787419479939,
+      "keyFiles": [
+        "accountFallback.js",
+        "capacityAdapter.js",
+        "clinepassModels.js"
+      ]
+    },
+    "src\\app": {
+      "path": "src\\app",
+      "purpose": "Application code",
+      "fileCount": 5,
+      "lastAccessed": 1787419480089,
+      "keyFiles": [
+        "favicon.ico",
+        "globals.css",
+        "layout.js"
+      ]
+    },
+    "src\\lib": {
+      "path": "src\\lib",
+      "purpose": "Library code",
+      "fileCount": 13,
+      "lastAccessed": 1787419480090,
+      "keyFiles": [
+        "appUpdater.js",
+        "comboValidation.js",
+        "consoleLogBuffer.js"
+      ]
+    },
+    "src\\models": {
+      "path": "src\\models",
+      "purpose": "Data models",
+      "fileCount": 1,
+      "lastAccessed": 1787419480091,
+      "keyFiles": [
+        "index.js"
+      ]
+    },
+    "tests\\node_modules": {
+      "path": "tests\\node_modules",
+      "purpose": "Dependencies",
+      "fileCount": 1,
+      "lastAccessed": 1787419480188,
+      "keyFiles": []
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src/app/check-usage/page.js",
+      "accessCount": 29,
+      "lastAccessed": 1787164611805,
+      "type": "file"
+    },
+    {
+      "path": "src/app/check-usage/brutal.css",
+      "accessCount": 11,
+      "lastAccessed": 1787161554475,
+      "type": "file"
+    },
+    {
+      "path": "src/app/(dashboard)/dashboard/quota-sharing/QuotaSharingClient.js",
+      "accessCount": 6,
+      "lastAccessed": 1787161678799,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/db/repos/quotaUsageReport.js",
+      "accessCount": 6,
+      "lastAccessed": 1787164631453,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/quota-keys/route.js",
+      "accessCount": 4,
+      "lastAccessed": 1787162043297,
+      "type": "file"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-08-19-check-usage-brutalist-redesign-design.md",
+      "accessCount": 3,
+      "lastAccessed": 1787076063648,
+      "type": "file"
+    },
+    {
+      "path": "C:/Users/afand/.claude/jobs/43a25196/tmp/plan-task2.md",
+      "accessCount": 2,
+      "lastAccessed": 1787074799908,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-19-check-usage-brutalist/task-1-brief.md",
+      "accessCount": 2,
+      "lastAccessed": 1787075340419,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-19-check-usage-brutalist/task-1-report.md",
+      "accessCount": 2,
+      "lastAccessed": 1787075340505,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-19-check-usage-brutalist/task-2-brief.md",
+      "accessCount": 2,
+      "lastAccessed": 1787075740120,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-19-check-usage-brutalist/task-2-report.md",
+      "accessCount": 2,
+      "lastAccessed": 1787075740174,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-19-check-usage-brutalist/progress.md",
+      "accessCount": 2,
+      "lastAccessed": 1787076063417,
+      "type": "file"
+    },
+    {
+      "path": "src/app/layout.js",
+      "accessCount": 2,
+      "lastAccessed": 1787076072475,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-20-quota-checkusage-enhancements/task-1-brief.md",
+      "accessCount": 2,
+      "lastAccessed": 1787160989629,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-20-quota-checkusage-enhancements/task-1-report.md",
+      "accessCount": 2,
+      "lastAccessed": 1787160989667,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-20-quota-checkusage-enhancements/task-2-report.md",
+      "accessCount": 2,
+      "lastAccessed": 1787161499501,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-20-quota-checkusage-enhancements/task-2-brief.md",
+      "accessCount": 2,
+      "lastAccessed": 1787161499554,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-20-quota-checkusage-enhancements/task-3-brief.md",
+      "accessCount": 2,
+      "lastAccessed": 1787161908921,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-20-quota-checkusage-enhancements/task-3-report.md",
+      "accessCount": 2,
+      "lastAccessed": 1787161908960,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-20-quota-checkusage-enhancements/progress.md",
+      "accessCount": 2,
+      "lastAccessed": 1787162030891,
+      "type": "file"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-08-20-quota-checkusage-enhancements-design.md",
+      "accessCount": 2,
+      "lastAccessed": 1787162030965,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/public/check-usage/route.js",
+      "accessCount": 2,
+      "lastAccessed": 1787162043360,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/quotaEnforcement.js",
+      "accessCount": 2,
+      "lastAccessed": 1787164647114,
+      "type": "directory"
+    },
+    {
+      "path": "C:/Users/afand/AppData/Local/Temp/claude/D-----9router-fork/c51ccb13-b84b-4c79-9e7d-047ecb7ed505/tasks/bdeznv5hc.output",
+      "accessCount": 1,
+      "lastAccessed": 1787072535453,
+      "type": "file"
+    },
+    {
+      "path": "FORK-CHANGES.md",
+      "accessCount": 1,
+      "lastAccessed": 1787072562336,
+      "type": "file"
+    },
+    {
+      "path": "src/app/globals.css",
+      "accessCount": 1,
+      "lastAccessed": 1787072915960,
+      "type": "file"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-19-check-usage-brutalist.md",
+      "accessCount": 1,
+      "lastAccessed": 1787074375190,
+      "type": "file"
+    },
+    {
+      "path": "C:/Users/afand/.claude/jobs/43a25196/tmp/plan-task1.md",
+      "accessCount": 1,
+      "lastAccessed": 1787074496373,
+      "type": "file"
+    },
+    {
+      "path": "C:/Users/afand/.claude/jobs/43a25196/tmp/page-partA.js",
+      "accessCount": 1,
+      "lastAccessed": 1787074835341,
+      "type": "file"
+    },
+    {
+      "path": "C:/Users/afand/.claude/jobs/43a25196/tmp/page-partB.js",
+      "accessCount": 1,
+      "lastAccessed": 1787074888004,
+      "type": "file"
+    },
+    {
+      "path": "C:/Users/afand/.claude/jobs/43a25196/tmp/plan-task2tail.md",
+      "accessCount": 1,
+      "lastAccessed": 1787074946380,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-19-check-usage-brutalist/review-f6478d63..bfa14248.diff",
+      "accessCount": 1,
+      "lastAccessed": 1787075340468,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-19-check-usage-brutalist/review-bfa14248..345b13b0.diff",
+      "accessCount": 1,
+      "lastAccessed": 1787075740147,
+      "type": "file"
+    },
+    {
+      "path": "C:/Users/afand/AppData/Local/Temp/claude/D-----9router-fork/0d11af51-bca9-446b-8eec-cf45a2df9722/tasks/b26pxrl5c.output",
+      "accessCount": 1,
+      "lastAccessed": 1787075895785,
+      "type": "file"
+    },
+    {
+      "path": "C:/Users/afand/.claude/jobs/43a25196/tmp/dev2.log",
+      "accessCount": 1,
+      "lastAccessed": 1787075925882,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-19-check-usage-brutalist/review-450b7d0f..345b13b0.diff",
+      "accessCount": 1,
+      "lastAccessed": 1787076064176,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/db/repos/quotaKeysRepo.js",
+      "accessCount": 1,
+      "lastAccessed": 1787159736005,
+      "type": "file"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-20-quota-checkusage-enhancements.md",
+      "accessCount": 1,
+      "lastAccessed": 1787160533496,
+      "type": "file"
+    },
+    {
+      "path": "C:/Users/afand/.claude/jobs/43a25196/tmp/plan2-task1.md",
+      "accessCount": 1,
+      "lastAccessed": 1787160590570,
+      "type": "file"
+    },
+    {
+      "path": "C:/Users/afand/.claude/jobs/43a25196/tmp/plan2-task2a.md",
+      "accessCount": 1,
+      "lastAccessed": 1787160624513,
+      "type": "file"
+    },
+    {
+      "path": "C:/Users/afand/.claude/jobs/43a25196/tmp/plan2-task2b.md",
+      "accessCount": 1,
+      "lastAccessed": 1787160654245,
+      "type": "file"
+    },
+    {
+      "path": "C:/Users/afand/.claude/jobs/43a25196/tmp/plan2-task3.md",
+      "accessCount": 1,
+      "lastAccessed": 1787160715945,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-20-quota-checkusage-enhancements/review-59a92242..eec52614.diff",
+      "accessCount": 1,
+      "lastAccessed": 1787160989696,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-20-quota-checkusage-enhancements/review-eec52614..9dd32613.diff",
+      "accessCount": 1,
+      "lastAccessed": 1787161499614,
+      "type": "file"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-20-quota-checkusage-enhancements/review-9dd32613..9f9c9a97.diff",
+      "accessCount": 1,
+      "lastAccessed": 1787161908940,
+      "type": "file"
+    },
+    {
+      "path": "src",
+      "accessCount": 1,
+      "lastAccessed": 1787161944044,
+      "type": "directory"
+    },
+    {
+      "path": ".superpowers/sdd/2026-08-20-quota-checkusage-enhancements/review-0d57c688..9f9c9a97.diff",
+      "accessCount": 1,
+      "lastAccessed": 1787162031398,
+      "type": "file"
+    },
+    {
+      "path": "src/app/(dashboard)/dashboard/quota-sharing/QuotaModelPicker.js",
+      "accessCount": 1,
+      "lastAccessed": 1787164670481,
+      "type": "file"
+    },
+    {
+      "path": "src/sse/handlers/chat.js",
+      "accessCount": 1,
+      "lastAccessed": 1787164763697,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/db/repos/usageRepo.js",
+      "accessCount": 1,
+      "lastAccessed": 1787165155384,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd \\\"D:/_/_9router-fork\\\"; echo \\\"=== eslint merged (our files) ===\\\"; npx eslint src/app/check-usage/page.js \\\"src/app/api/quota-keys/route.js\\\" 2>&1 | grep -cE \\\"error\\\" ; echo \\\"(errors...",
+  "error": "Exit code 143\nCommand timed out after 2m 0s\n=== eslint merged (our files) ===",
+  "timestamp": "2026-08-19T18:18:39.248Z",
+  "retry_count": 1
+}

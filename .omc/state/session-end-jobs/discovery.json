@@ -1,0 +1,74 @@
+{
+  "version": 2,
+  "cursor": 0,
+  "tickets": [
+    {
+      "sessionId": "9ffb01ff-b43f-4a4b-8092-58cab2122c18",
+      "attempts": 0,
+      "retryAt": "2026-08-18T16:58:04.910Z",
+      "claimNonce": "2a4d55bf-bef1-47b5-9aea-3c5c8ec4d349",
+      "leaseExpiresAt": "2026-08-22T17:28:14.205Z"
+    },
+    {
+      "sessionId": "c51ccb13-b84b-4c79-9e7d-047ecb7ed505",
+      "attempts": 0,
+      "retryAt": "2026-08-18T17:25:29.985Z",
+      "claimNonce": "d7ba3b0e-b918-4cb1-980b-a662e2987b86",
+      "leaseExpiresAt": "2026-08-22T17:28:14.205Z"
+    },
+    {
+      "sessionId": "a868bc72-b756-4708-9caf-b551e64d4b27",
+      "attempts": 0,
+      "retryAt": "2026-08-18T17:25:30.045Z",
+      "claimNonce": "f7efd4d8-a8bb-42a6-9b55-183592d055c6",
+      "leaseExpiresAt": "2026-08-22T17:25:28.039Z"
+    },
+    {
+      "sessionId": "81f5f77f-1ae2-42c0-827f-47e23654e775",
+      "attempts": 0,
+      "retryAt": "2026-08-18T17:30:45.316Z",
+      "claimNonce": "4b9abb8b-983c-4a02-8eb6-49df30bab003",
+      "leaseExpiresAt": "2026-08-22T17:25:28.039Z"
+    },
+    {
+      "sessionId": "649cd355-b476-485a-a3af-1d39a688ce4b",
+      "attempts": 0,
+      "retryAt": "2026-08-18T17:30:45.341Z",
+      "claimNonce": "b2f7bf14-e66c-48a8-af14-a4068da3a52b",
+      "leaseExpiresAt": "2026-08-22T17:25:28.039Z"
+    },
+    {
+      "sessionId": "60e7cc2c-b7a4-4a55-9806-e9d2ee6c4d64",
+      "attempts": 0,
+      "retryAt": "2026-08-19T13:28:43.281Z",
+      "claimNonce": "0a98bf1e-2f5f-4876-9522-0125d75a1d7f",
+      "leaseExpiresAt": "2026-08-22T17:25:28.039Z"
+    },
+    {
+      "sessionId": "049e1a6a-3b21-46e4-8131-12ae2ab4508d",
+      "attempts": 0,
+      "retryAt": "2026-08-19T13:28:43.349Z",
+      "claimNonce": "9afcb35b-98bf-4cc9-85d6-22c4d8aee370",
+      "leaseExpiresAt": "2026-08-22T17:28:14.205Z"
+    },
+    {
+      "sessionId": "43a25196-b784-4b4e-a1ad-437adf6fdcd3",
+      "attempts": 0,
+      "retryAt": "2026-08-19T20:02:02.419Z",
+      "acknowledgedAt": "2026-08-20T06:24:59.827Z"
+    },
+    {
+      "sessionId": "7c72559a-81ed-4606-8f64-a91f6a89a005",
+      "attempts": 0,
+      "retryAt": "2026-08-20T16:37:04.238Z",
+      "acknowledgedAt": "2026-08-20T16:37:08.002Z"
+    },
+    {
+      "sessionId": "4d8913a3-9e12-478d-91f5-6bf10866b5ca",
+      "attempts": 0,
+      "retryAt": "2026-08-22T17:27:53.446Z",
+      "claimNonce": "e5a44be3-ccd5-421a-a728-5afe2e8a38af",
+      "leaseExpiresAt": "2026-08-22T17:28:14.205Z"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"git add open-sse/config/errorConfig.js open-sse/config/runtimeConfig.js open-sse/executors/codex.js open-sse/services/accountFallback.js tests/unit/codex-fast-capacity.test.js && git commi...",
+  "error": "Exit code 128\nfatal: pathspec 'open-sse/config/errorConfig.js' did not match any files",
+  "timestamp": "2026-08-22T17:45:30.034Z",
+  "retry_count": 3
+}
