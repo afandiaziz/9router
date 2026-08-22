@@ -1,0 +1,203 @@
+diff --git a/open-sse/translator/index.js b/open-sse/translator/index.js
+index e2f45339cc..2fcbcbf83a 100644
+--- a/open-sse/translator/index.js
++++ b/open-sse/translator/index.js
+@@ -1,7 +1,7 @@
+ import { FORMATS } from "./formats.js";
+ import { ensureToolCallIds, fixMissingToolResponses } from "./concerns/toolCall.js";
+ import { prepareClaudeRequest } from "./formats/claude.js";
+-import { cloakClaudeTools } from "../utils/claudeCloaking.js";
++import { cloakClaudeTools, decloakStreamChunk } from "../utils/claudeCloaking.js";
+ import { filterToOpenAIFormat } from "./formats/openai.js";
+ import { normalizeThinkingConfig } from "../services/provider.js";
+ import { applyThinking, captureThinking } from "./concerns/thinkingUnified.js";
+@@ -133,7 +133,7 @@ export function translateRequest(sourceFormat, targetFormat, model, body, stream
+     result = prepareClaudeRequest(result, provider, apiKey, connectionId, credentials?.rawHeaders, clientSessionId);
+   }
+ 
+-  // Claude cloaking: rename client tools with _cc suffix (anti-ban)
++  // Claude cloaking: rename client tools with CLAUDE_TOOL_SUFFIX (anti-ban)
+   // quirk: only providers flagged cloakToolsOnOAuth, and only with an OAuth token
+   if (PROVIDERS[provider]?.quirks?.cloakToolsOnOAuth) {
+     const apiKey = credentials?.accessToken || credentials?.apiKey || null;
+@@ -161,9 +161,12 @@ export function translateRequest(sourceFormat, targetFormat, model, body, stream
+ // Translate response chunk: target -> openai -> source
+ export function translateResponse(targetFormat, sourceFormat, chunk, state) {
+   ensureInitialized();
+-  // If same format, return as-is
++  // If same format, return as-is — except the tool name may still be cloaked:
++  // translateRequest() suffixes client tools for OAuth-cloaked Claude providers
++  // even when no format conversion is needed, so streamed tool_use blocks must
++  // be decloaked here or the client sees an unknown ("_ide"-suffixed) tool.
+   if (sourceFormat === targetFormat) {
+-    return [chunk];
++    return [decloakStreamChunk(chunk, state?.toolNameMap)];
+   }
+ 
+   let results = [chunk];
+diff --git a/open-sse/utils/claudeCloaking.js b/open-sse/utils/claudeCloaking.js
+index 46a44e4f95..4f43a670f5 100644
+--- a/open-sse/utils/claudeCloaking.js
++++ b/open-sse/utils/claudeCloaking.js
+@@ -31,8 +31,8 @@ function generateFakeUserID(sessionId, apiKey) {
+ 
+ /**
+  * Cloak tools before sending to Claude provider (anti-ban):
+- * - Rename non-CC client tools with _cc suffix in tools[] and messages[]
+- * - Skip tools that are already CC default names (they become decoys as-is)
++ * - Rename client tools with the CLAUDE_TOOL_SUFFIX ("_ide") in tools[] and messages[]
++ * - Skip tools that carry a `type` (server-side built-ins) — sent as-is
+  * - Inject CC_DECOY_TOOLS after client tools
+  * Returns { body, toolNameMap } where toolNameMap maps suffixed → original
+  * @param {object} body - Claude API request body
+@@ -101,6 +101,33 @@ export function decloakToolNames(body, toolNameMap) {
+   return { ...body, content };
+ }
+ 
++/**
++ * Decloak the tool name inside a single streamed Claude SSE event.
++ *
++ * Streaming counterpart of decloakToolNames(). Required for claude→claude
++ * proxying: translateResponse() returns same-format chunks untouched, so
++ * without this the client receives the cloaked ("_ide"-suffixed) tool name
++ * and rejects the call as an unknown tool. In a Claude SSE stream a tool
++ * name appears exactly once per call — on the content_block_start event of
++ * a tool_use block; argument deltas carry no name.
++ *
++ * Unknown names (e.g. a CC decoy tool the model called anyway) pass through
++ * unchanged, matching the non-streaming decloak behavior.
++ *
++ * @param {object|null} chunk - Parsed SSE event (may be null on stream flush)
++ * @param {Map|null} toolNameMap - Suffixed → original name map from cloakClaudeTools()
++ * @returns {object|null} The chunk, with the tool_use name restored when cloaked
++ */
++export function decloakStreamChunk(chunk, toolNameMap) {
++  if (!toolNameMap?.size || !chunk || typeof chunk !== "object") return chunk;
++  if (chunk.type !== "content_block_start") return chunk;
++  const block = chunk.content_block;
++  if (block?.type !== "tool_use" || typeof block.name !== "string") return chunk;
++  const original = toolNameMap.get(block.name);
++  if (!original) return chunk;
++  return { ...chunk, content_block: { ...block, name: original } };
++}
++
+ // CC decoy tools — Claude Code native tool names, marked unavailable
+ const CC_DECOY_TOOLS = [
+   { name: "Task", description: "This tool is currently unavailable.", input_schema: { type: "object", properties: {} } },
+diff --git a/tests/translator/claude-claude-stream-decloak.test.js b/tests/translator/claude-claude-stream-decloak.test.js
+new file mode 100644
+index 0000000000..35c0fcdfc6
+--- /dev/null
++++ b/tests/translator/claude-claude-stream-decloak.test.js
+@@ -0,0 +1,49 @@
++// Regression test: claude → claude streaming passthrough must still decloak
++// tool names. translateRequest() cloaks client tool names with CLAUDE_TOOL_SUFFIX
++// for OAuth-cloaked Claude providers (cloakToolsOnOAuth) even when source and
++// target formats match; the same-format fast path in translateResponse() used
++// to return chunks untouched, leaking the suffixed name (e.g. "run_code_ide")
++// to the client, which then rejected the call as an unknown tool.
++import { describe, it, expect } from "vitest";
++import "./registerAll.js";
++import { translateResponse } from "../../open-sse/translator/index.js";
++import { FORMATS } from "../../open-sse/translator/formats.js";
++import { CLAUDE_TOOL_SUFFIX } from "../../open-sse/config/appConstants.js";
++
++const CLOAKED = "run_code" + CLAUDE_TOOL_SUFFIX;
++
++const toolUseStart = (name) => ({
++  type: "content_block_start",
++  index: 1,
++  content_block: { type: "tool_use", id: "toolu_01XYZ", name, input: {} }
++});
++
++describe("Claude → Claude streaming passthrough (OAuth tool cloak)", () => {
++  const state = { toolNameMap: new Map([[CLOAKED, "run_code"]]) };
++
++  it("restores the original tool name on tool_use content_block_start", () => {
++    const [out] = translateResponse(FORMATS.CLAUDE, FORMATS.CLAUDE, toolUseStart(CLOAKED), state);
++    expect(out.content_block.name).toBe("run_code");
++  });
++
++  it("leaves uncloaked chunks untouched (identity passthrough)", () => {
++    const chunk = toolUseStart("Bash"); // decoy name, not in the map
++    const [out] = translateResponse(FORMATS.CLAUDE, FORMATS.CLAUDE, chunk, state);
++    expect(out).toBe(chunk);
++
++    const textChunk = { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "hi" } };
++    const [outText] = translateResponse(FORMATS.CLAUDE, FORMATS.CLAUDE, textChunk, state);
++    expect(outText).toBe(textChunk);
++  });
++
++  it("is a no-op when no cloak map is present", () => {
++    const chunk = toolUseStart(CLOAKED);
++    const [out] = translateResponse(FORMATS.CLAUDE, FORMATS.CLAUDE, chunk, {});
++    expect(out).toBe(chunk);
++  });
++
++  it("tolerates the null flush chunk", () => {
++    const [out] = translateResponse(FORMATS.CLAUDE, FORMATS.CLAUDE, null, state);
++    expect(out).toBeNull();
++  });
++});
+diff --git a/tests/unit/claude-cloaking.test.js b/tests/unit/claude-cloaking.test.js
+index 6b6e5dc67a..cd81081acd 100644
+--- a/tests/unit/claude-cloaking.test.js
++++ b/tests/unit/claude-cloaking.test.js
+@@ -3,10 +3,11 @@
+  *
+  * Tests cover:
+  *  - cloakClaudeTools() - tool renaming and forced tool_choice suffixing
++ *  - decloakStreamChunk() - restoring tool names in streamed Claude SSE events
+  */
+ 
+ import { describe, it, expect } from "vitest";
+-import { cloakClaudeTools } from "../../open-sse/utils/claudeCloaking.js";
++import { cloakClaudeTools, decloakStreamChunk } from "../../open-sse/utils/claudeCloaking.js";
+ import { CLAUDE_TOOL_SUFFIX } from "../../open-sse/config/appConstants.js";
+ 
+ describe("cloakClaudeTools", () => {
+@@ -74,3 +75,44 @@ describe("cloakClaudeTools", () => {
+     expect(toolNameMap).toBeNull();
+   });
+ });
++
++describe("decloakStreamChunk", () => {
++  // Cloaked exactly as cloakClaudeTools() does on the request side
++  const toolNameMap = new Map([["run_code" + CLAUDE_TOOL_SUFFIX, "run_code"]]);
++
++  const toolUseStart = (name) => ({
++    type: "content_block_start",
++    index: 1,
++    content_block: { type: "tool_use", id: "toolu_01abc", name, input: {} }
++  });
++
++  it("restores the original name on a tool_use content_block_start", () => {
++    const out = decloakStreamChunk(toolUseStart("run_code" + CLAUDE_TOOL_SUFFIX), toolNameMap);
++    expect(out.content_block.name).toBe("run_code");
++  });
++
++  it("does not mutate the input chunk", () => {
++    const chunk = toolUseStart("run_code" + CLAUDE_TOOL_SUFFIX);
++    decloakStreamChunk(chunk, toolNameMap);
++    expect(chunk.content_block.name).toBe("run_code" + CLAUDE_TOOL_SUFFIX);
++  });
++
++  it("passes through names the map does not know (e.g. decoy tools)", () => {
++    const chunk = toolUseStart("Bash");
++    expect(decloakStreamChunk(chunk, toolNameMap)).toBe(chunk);
++  });
++
++  it("passes through non-tool_use events unchanged", () => {
++    const textStart = { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } };
++    expect(decloakStreamChunk(textStart, toolNameMap)).toBe(textStart);
++
++    const delta = { type: "content_block_delta", index: 1, delta: { type: "input_json_delta", partial_json: "{}" } };
++    expect(decloakStreamChunk(delta, toolNameMap)).toBe(delta);
++  });
++
++  it("tolerates null chunks and missing maps (stream flush path)", () => {
++    expect(decloakStreamChunk(null, toolNameMap)).toBeNull();
++    expect(decloakStreamChunk(toolUseStart("run_code" + CLAUDE_TOOL_SUFFIX), null).content_block.name).toBe("run_code" + CLAUDE_TOOL_SUFFIX);
++    expect(decloakStreamChunk(toolUseStart("run_code" + CLAUDE_TOOL_SUFFIX), new Map()).content_block.name).toBe("run_code" + CLAUDE_TOOL_SUFFIX);
++  });
++});
