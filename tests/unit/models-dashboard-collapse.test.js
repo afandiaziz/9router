@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createCollapsedGroupSet } from "../../src/app/(dashboard)/dashboard/models/collapseState.js";
+import {
+  createCollapsedGroupSet,
+  getInitialCollapsedGroupSet,
+} from "../../src/app/(dashboard)/dashboard/models/collapseState.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pagePath = join(
@@ -27,12 +30,33 @@ describe("Models dashboard initial collapse", () => {
     expect(createCollapsedGroupSet()).not.toBe(createCollapsedGroupSet());
   });
 
-  it("applies initial collapse once after asynchronous groups exist", () => {
+  it("waits for initial loading, includes async groups, and applies only once", () => {
+    const staticGroups = [{ key: "openai" }];
+    const loadedGroups = [...staticGroups, { key: "custom-provider" }];
+
+    expect(getInitialCollapsedGroupSet({ groups: staticGroups, loading: true })).toBeNull();
+
+    const initial = getInitialCollapsedGroupSet({ groups: loadedGroups, loading: false });
+    expect([...initial]).toEqual(["openai", "custom-provider"]);
+
+    initial.delete("openai");
+    expect(
+      getInitialCollapsedGroupSet({
+        groups: [...loadedGroups, { key: "refreshed-provider" }],
+        loading: false,
+        initialCollapseApplied: true,
+      })
+    ).toBeNull();
+    expect([...initial]).toEqual(["custom-provider"]);
+  });
+
+  it("wires loading-aware one-shot collapse into the models page", () => {
     const source = readFileSync(pagePath, "utf8");
 
     expect(source).toContain("initialCollapseAppliedRef");
-    expect(source).toContain("createCollapsedGroupSet(groups)");
-    expect(source).toMatch(/if \(initialCollapseAppliedRef\.current \|\| groups\.length === 0\) return;/);
+    expect(source).toContain("getInitialCollapsedGroupSet({");
+    expect(source).toContain("initialCollapseApplied: initialCollapseAppliedRef.current");
+    expect(source).toContain("loading,");
     expect(source).toContain("initialCollapseAppliedRef.current = true");
   });
 });

@@ -13,7 +13,7 @@ import { resolveModelsDevProviderId } from "@/lib/modelsDev/providerMap.js";
 import { formatModelMeta } from "@/shared/utils/modelMeta";
 import EditModelModal from "./EditModelModal";
 import ComboManagement from "../combos/ComboManagement";
-import { createCollapsedGroupSet } from "./collapseState";
+import { getInitialCollapsedGroupSet } from "./collapseState";
 
 const inputClass =
   "w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary";
@@ -206,11 +206,16 @@ export default function ModelsPage() {
   }, [customModels, getProviderInfo]);
 
   useEffect(() => {
-    if (initialCollapseAppliedRef.current || groups.length === 0) return;
+    const initialCollapsedGroups = getInitialCollapsedGroupSet({
+      groups,
+      loading,
+      initialCollapseApplied: initialCollapseAppliedRef.current,
+    });
+    if (!initialCollapsedGroups) return;
 
-    setCollapsedGroups(createCollapsedGroupSet(groups));
+    setCollapsedGroups(initialCollapsedGroups);
     initialCollapseAppliedRef.current = true;
-  }, [groups]);
+  }, [groups, loading]);
 
   const catalogIds = useMemo(
     () => new Set((modelsDev?.providers || []).map((p) => p.id)),

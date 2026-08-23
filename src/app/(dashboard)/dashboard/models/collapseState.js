@@ -5,3 +5,13 @@ export function createCollapsedGroupSet(groups = []) {
       .filter((key) => typeof key === "string" && key.length > 0)
   );
 }
+
+export function getInitialCollapsedGroupSet({
+  groups = [],
+  loading = true,
+  initialCollapseApplied = false,
+} = {}) {
+  if (loading || initialCollapseApplied || groups.length === 0) return null;
+
+  return createCollapsedGroupSet(groups);
+}
