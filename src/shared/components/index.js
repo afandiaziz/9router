@@ -40,6 +40,6 @@ export { default as ProviderInfoCard } from "./ProviderInfoCard";
 export { default as CapacityBadges } from "./CapacityBadges";
 
 // Layouts
-export * from "./layouts";
+// Layouts are imported directly from ./layouts
 
 
