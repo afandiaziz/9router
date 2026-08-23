@@ -37,17 +37,23 @@ describe("shared dashboard combo management", () => {
     expect(source).not.toContain("function ComboCard");
   });
 
-  it("renders shared combo management before the model catalog", () => {
+  it("mounts shared combo management independently before catalog loading", () => {
     const source = readFileSync(modelsPagePath, "utf8");
-    const comboPosition = source.indexOf("<ComboManagement />");
-    const catalogPosition = source.indexOf("{/* Header */}");
+    const pageBody = source.slice(source.indexOf("export default function ModelsPage"));
+    const comboPosition = pageBody.indexOf("<ComboManagement />");
+    const rootReturnPosition = pageBody.lastIndexOf("\n  return (", comboPosition);
+    const catalogLoadingPosition = pageBody.indexOf("{loading ? (");
+    const catalogPosition = pageBody.indexOf("{/* Header */}");
 
     expect(source).toContain(
       'import ComboManagement from "../combos/ComboManagement"'
     );
     expect(source).toContain("Model Combos");
-    expect(comboPosition).toBeGreaterThan(-1);
-    expect(catalogPosition).toBeGreaterThan(comboPosition);
+    expect(pageBody).not.toMatch(/if\s*\(\s*loading\s*\)\s*\{\s*return\s*\(/);
+    expect(rootReturnPosition).toBeGreaterThan(-1);
+    expect(comboPosition).toBeGreaterThan(rootReturnPosition);
+    expect(catalogLoadingPosition).toBeGreaterThan(comboPosition);
+    expect(catalogPosition).toBeGreaterThan(catalogLoadingPosition);
     expect(source).not.toContain('fetch("/api/combos")');
   });
 });

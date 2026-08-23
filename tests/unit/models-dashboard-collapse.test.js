@@ -59,4 +59,20 @@ describe("Models dashboard initial collapse", () => {
     expect(source).toContain("loading,");
     expect(source).toContain("initialCollapseAppliedRef.current = true");
   });
+
+  it("only declares aria-controls while the provider region is mounted", () => {
+    const source = readFileSync(pagePath, "utf8");
+    const providerCardSource = source.slice(
+      source.indexOf("visibleGroups.map((group) =>"),
+      source.indexOf("{editing && (")
+    );
+
+    expect(providerCardSource).toContain("aria-expanded={!isCollapsed}");
+    expect(providerCardSource).toContain(
+      "aria-controls={isCollapsed ? undefined : `models-${group.key}`}"
+    );
+    expect(providerCardSource).toMatch(
+      /\{!isCollapsed && \(\s*<div id=\{`models-\$\{group\.key\}`\}/
+    );
+  });
 });

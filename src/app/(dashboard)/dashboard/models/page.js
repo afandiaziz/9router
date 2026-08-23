@@ -406,15 +406,6 @@ export default function ModelsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex flex-col gap-6">
-        <CardSkeleton />
-        <CardSkeleton />
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
       <section className="flex min-w-0 flex-col gap-4" aria-labelledby="model-combos-heading">
@@ -426,8 +417,15 @@ export default function ModelsPage() {
 
       <div className="border-t border-border-subtle" />
 
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {loading ? (
+        <div className="flex flex-col gap-6">
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+      ) : (
+        <div className="contents">
+          {/* Header */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-text-muted">
           All built-in and custom models across providers.
           {modelsDev ? (
@@ -523,7 +521,7 @@ export default function ModelsPage() {
                 <button
                   onClick={() => toggleGroupCollapse(group.key)}
                   aria-expanded={!isCollapsed}
-                  aria-controls={`models-${group.key}`}
+                  aria-controls={isCollapsed ? undefined : `models-${group.key}`}
                   className="flex items-center gap-2 min-w-0 text-left hover:opacity-80 transition-opacity flex-1 py-1 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-lg text-text-muted">
@@ -586,6 +584,8 @@ export default function ModelsPage() {
         message={confirmState?.message || ""}
         confirmText="Delete"
       />
+        </div>
+      )}
     </div>
   );
 }
