@@ -87,6 +87,7 @@ No new lint findings were introduced. `git diff --check` passed.
 - Windows occasionally retains a lock on the temporary better-sqlite3 database in `model-routing.test.js`, causing an `EBUSY` cleanup failure in grouped runs. The actual routing assertions pass, and the focused alias-to-combo contract uses mocked persistence to avoid this unrelated platform flake.
 - Existing `.omc` state changes were left untouched and are not included in the implementation commit.
 
-## Commit
+## Commits
 
-Pending at report creation; final commit hash is recorded in the final response.
+- `ed814fea` — `fix(models): render combos as editable model rows`
+- A follow-up documentation-only commit records this hash in the report.
