@@ -1,48 +1,50 @@
-// Unified DB interface. Repositories handle individual domain logic.
-// This file coordinates exports, migrations, backup, and full import/export.
-
-export { getDb, closeDb, getDriverName, isInMemory } from "./driver.js";
-export { runMigrations } from "./migrate.js";
-export { backupDatabase, rotateBackups, getBackupList } from "./backup.js";
+// Public API barrel — all DB functions
+import { getAdapter } from "./driver.js";
+import { stringifyJson, parseJson } from "./helpers/jsonCol.js";
+import { decryptSecretJson, encryptSecretJson } from "./helpers/secretCol.js";
 
 // Settings
-export { getSettings, updateSettings } from "./repos/settingsRepo.js";
+export {
+  getSettings, updateSettings, isCloudEnabled, getCloudUrl, exportSettings,
+} from "./repos/settingsRepo.js";
 
-// Provider Connections
+// Provider connections
 export {
   getProviderConnections, getProviderConnectionById,
-  saveProviderConnection, updateProviderConnection, deleteProviderConnection,
-  patchProviderData, getActiveConnectionsByProvider,
+  createProviderConnection, updateProviderConnection,
+  deleteProviderConnection, deleteProviderConnectionsByProvider,
+  reorderProviderConnections, cleanupProviderConnections,
+  getInvalidConnections,
+  bulkSetConnectionsActive, bulkDeleteConnections, bulkResetConnectionErrors,
 } from "./repos/connectionsRepo.js";
 
-// Provider Nodes
+// Provider nodes
 export {
   getProviderNodes, getProviderNodeById,
-  saveProviderNode, deleteProviderNode,
+  createProviderNode, updateProviderNode, deleteProviderNode,
 } from "./repos/nodesRepo.js";
 
-// Proxy Pools
+// Proxy pools
 export {
   getProxyPools, getProxyPoolById,
-  saveProxyPool, updateProxyPool, deleteProxyPool,
+  createProxyPool, updateProxyPool, deleteProxyPool,
 } from "./repos/proxyPoolsRepo.js";
 
-// API Keys
+// API keys
 export {
-  getApiKeys, getApiKeyById, getApiKeyByValue,
-  saveApiKey, deleteApiKey,
+  getApiKeys, getApiKeyById, createApiKey, updateApiKey, deleteApiKey, validateApiKey,
 } from "./repos/apiKeysRepo.js";
 
 // Combos
 export {
   getCombos, getComboById, getComboByName,
-  saveCombo, deleteCombo,
+  createCombo, updateCombo, deleteCombo,
 } from "./repos/combosRepo.js";
 
 // Aliases (model + custom + mitm)
 export {
   getModelAliases, setModelAlias, deleteModelAlias, deleteModelAliasesByProvider,
-  getCustomModels, addCustomModel, deleteCustomModel, addCustomModelsBulk,
+  getCustomModels, addCustomModel, addCustomModelsBulk, deleteCustomModel,
   getMitmAlias, setMitmAliasAll,
 } from "./repos/aliasRepo.js";
 
@@ -56,61 +58,44 @@ export {
   getPricing, getPricingForModel, updatePricing, resetPricing, resetAllPricing,
 } from "./repos/pricingRepo.js";
 
-// Disabled Models
+// Disabled models
 export {
-  getDisabledModels, disableModel, enableModel, isModelDisabled,
+  getDisabledModels, getDisabledByProvider, disableModels, enableModels,
 } from "./repos/disabledModelsRepo.js";
 
-// Quota Keys
+// Usage
 export {
-  getQuotaKeys, getQuotaKeyById, getQuotaKeyByValue, getQuotaKeyByFullKey,
-  saveQuotaKey, updateQuotaKey, deleteQuotaKey,
-} from "./repos/quotaKeysRepo.js";
-
-// Quota Usage (Window counters)
-export {
-  getQuotaUsage, recordQuotaTokens, getAvailableTokens, isQuotaExhausted,
-} from "./repos/quotaWindow.js";
-
-// Usage History (SQLite storage)
-export {
-  getUsageHistory, getDailyUsage, getUsageSummary, getUsageTopStats,
-  insertUsageRecord, updateUsageRecord, parseModelBreakdown,
-  ensureUsageHistorySeeded,
+  statsEmitter, trackPendingRequest, getActiveRequests,
+  saveRequestUsage, getUsageHistory, getUsageStats, getChartData,
+  getDailyConnectionUsage, appendRequestLog, getRecentLogs,
 } from "./repos/usageRepo.js";
 
-// Quota Usage Report (per-key token tracking)
+// Request details
 export {
-  getQuotaUsageReport, getQuotaUsageSummary,
-  recordQuotaKeyUsage, getActiveQuotaWindowUsage,
-} from "./repos/quotaUsageReport.js";
-
-// Request Details (Debugging / Inspection)
-export {
-  getRequestDetails, getRequestDetailById,
-  saveRequestDetail, cleanupOldRequestDetails,
+  saveRequestDetail, getRequestDetails, getRequestDetailById, getDistinctProviders,
 } from "./repos/requestDetailsRepo.js";
 
-import { getDb } from "./driver.js";
-import { parseJson, stringifyJson } from "./helpers/jsonCol.js";
+// Quota keys
+export {
+  generateQuotaKey, createQuotaKey, getQuotaKeys, getQuotaKeyById,
+  getQuotaKeyByFullKey, updateQuotaKey, toggleQuotaKey, deleteQuotaKey,
+  getQuotaUsageForWindow, incrementQuotaUsage, getQuotaKeyProgress,
+} from "./repos/quotaKeysRepo.js";
 
-/**
- * Export the entire database state as a JSON-serializable object.
- * Used by /api/settings/export and cloud sync.
- */
+// Export/import full DB
 export async function exportDb() {
-  const db = await getDb();
-  const metaLifetime = db.get(`SELECT value FROM _meta WHERE key = 'totalRequestsLifetime'`);
-  const totalRequestsLifetime = metaLifetime ? Number(metaLifetime.value) : null;
+  const db = await getAdapter();
+  const { exportSettings } = await import("./repos/settingsRepo.js");
+  const lifetimeRow = db.get(`SELECT value FROM _meta WHERE key = 'totalRequestsLifetime'`);
+  const totalRequestsLifetime = Number.parseInt(lifetimeRow?.value || "0", 10);
+
   const out = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    settings: parseJson((db.get(`SELECT data FROM settings WHERE id = 1`) || {}).data, {}),
-    connections: db.all(`SELECT * FROM providerConnections`).map((r) => ({ ...r, data: parseJson(r.data, {}) })),
-    nodes: db.all(`SELECT * FROM providerNodes`).map((r) => ({ ...r, data: parseJson(r.data, {}) })),
-    proxyPools: db.all(`SELECT * FROM proxyPools`).map((r) => ({ ...r, data: parseJson(r.data, {}) })),
-    apiKeys: db.all(`SELECT * FROM apiKeys`),
-    combos: db.all(`SELECT * FROM combos`).map((r) => ({ ...r, models: parseJson(r.models, []) })),
+    settings: await exportSettings(),
+    providerConnections: db.all(`SELECT * FROM providerConnections`).map((r) => ({ ...decryptSecretJson(r.data, {}), id: r.id, provider: r.provider, authType: r.authType, name: r.name, email: r.email, priority: r.priority, isActive: r.isActive === 1, createdAt: r.createdAt, updatedAt: r.updatedAt })),
+    providerNodes: db.all(`SELECT * FROM providerNodes`).map((r) => ({ ...parseJson(r.data, {}), id: r.id, type: r.type, name: r.name, createdAt: r.createdAt, updatedAt: r.updatedAt })),
+    proxyPools: db.all(`SELECT * FROM proxyPools`).map((r) => ({ ...parseJson(r.data, {}), id: r.id, isActive: r.isActive === 1, testStatus: r.testStatus, createdAt: r.createdAt, updatedAt: r.updatedAt })),
+    apiKeys: db.all(`SELECT * FROM apiKeys`).map((r) => ({ id: r.id, key: r.key, name: r.name, machineId: r.machineId, isActive: r.isActive === 1, createdAt: r.createdAt })),
+    combos: db.all(`SELECT * FROM combos`).map((r) => ({ id: r.id, name: r.name, kind: r.kind, models: parseJson(r.models, []), createdAt: r.createdAt, updatedAt: r.updatedAt })),
     modelAliases: {},
     customModels: [],
     mitmAlias: {},
@@ -139,18 +124,17 @@ export async function exportDb() {
   return out;
 }
 
-/**
- * Import a full database snapshot, replacing existing content.
- * Wraps everything in a single transaction.
- */
 export async function importDb(payload) {
-  if (!payload || typeof payload !== "object") throw new Error("Invalid payload");
-  const db = await getDb();
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new Error("Invalid database payload");
+  }
+  const db = await getAdapter();
   const hasUsageHistory = Array.isArray(payload.usageHistory);
   const hasUsageDaily = Array.isArray(payload.usageDaily);
 
-  await db.transaction(() => {
-    // Clear existing
+  db.transaction(() => {
+    // Usage tables are only replaced when present, so backups created by an
+    // older version do not unexpectedly erase usage collected by a newer one.
     db.run(`DELETE FROM settings`);
     db.run(`DELETE FROM providerConnections`);
     db.run(`DELETE FROM providerNodes`);
@@ -161,62 +145,52 @@ export async function importDb(payload) {
     if (hasUsageHistory) db.run(`DELETE FROM usageHistory`);
     if (hasUsageDaily) db.run(`DELETE FROM usageDaily`);
 
-    // Settings
     if (payload.settings) {
-      db.run(`INSERT OR REPLACE INTO settings(id, data) VALUES(1, ?)`, [stringifyJson(payload.settings)]);
+      db.run(`INSERT INTO settings(id, data) VALUES(1, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data`, [stringifyJson(payload.settings)]);
     }
 
-    // Connections
-    for (const c of payload.connections || []) {
+    for (const c of payload.providerConnections || []) {
+      const { id, provider, authType, name, email, priority, isActive, createdAt, updatedAt, ...rest } = c;
       db.run(
-        `INSERT OR REPLACE INTO providerConnections(id, provider, authType, name, email, priority, isActive, data, createdAt, updatedAt)
-         VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [c.id, c.provider, c.authType || "apiKey", c.name || null, c.email || null, c.priority || null, c.isActive !== false ? 1 : 0, stringifyJson(c.data || {}), c.createdAt || new Date().toISOString(), c.updatedAt || new Date().toISOString()]
+        `INSERT OR REPLACE INTO providerConnections(id, provider, authType, name, email, priority, isActive, data, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, provider, authType || "oauth", name || null, email || null, priority || null, isActive === false ? 0 : 1, encryptSecretJson(rest), createdAt || new Date().toISOString(), updatedAt || new Date().toISOString()]
       );
     }
-
-    // Nodes
-    for (const n of payload.nodes || []) {
+    for (const n of payload.providerNodes || []) {
+      const { id, type, name, createdAt, updatedAt, ...rest } = n;
       db.run(
         `INSERT OR REPLACE INTO providerNodes(id, type, name, data, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?)`,
-        [n.id, n.type || null, n.name || null, stringifyJson(n.data || {}), n.createdAt || new Date().toISOString(), n.updatedAt || new Date().toISOString()]
+        [id, type || null, name || null, stringifyJson(rest), createdAt || new Date().toISOString(), updatedAt || new Date().toISOString()]
       );
     }
-
-    // Proxy Pools
     for (const p of payload.proxyPools || []) {
+      const { id, isActive, testStatus, createdAt, updatedAt, ...rest } = p;
       db.run(
         `INSERT OR REPLACE INTO proxyPools(id, isActive, testStatus, data, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?)`,
-        [p.id, p.isActive !== false ? 1 : 0, p.testStatus || null, stringifyJson(p.data || {}), p.createdAt || new Date().toISOString(), p.updatedAt || new Date().toISOString()]
+        [id, isActive === false ? 0 : 1, testStatus || "unknown", stringifyJson(rest), createdAt || new Date().toISOString(), updatedAt || new Date().toISOString()]
       );
     }
-
-    // API Keys
     for (const k of payload.apiKeys || []) {
       db.run(
         `INSERT OR REPLACE INTO apiKeys(id, key, name, machineId, isActive, createdAt) VALUES(?, ?, ?, ?, ?, ?)`,
-        [k.id, k.key, k.name || null, k.machineId || null, k.isActive !== false ? 1 : 0, k.createdAt || new Date().toISOString()]
+        [k.id, k.key, k.name || null, k.machineId || null, k.isActive === false ? 0 : 1, k.createdAt || new Date().toISOString()]
       );
     }
-
-    // Combos
     for (const c of payload.combos || []) {
       db.run(
         `INSERT OR REPLACE INTO combos(id, name, kind, models, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?)`,
         [c.id, c.name, c.kind || null, stringifyJson(c.models || []), c.createdAt || new Date().toISOString(), c.updatedAt || new Date().toISOString()]
       );
     }
-
-    // KV stores
-    for (const [alias, target] of Object.entries(payload.modelAliases || {})) {
-      db.run(`INSERT OR REPLACE INTO kv(scope, key, value) VALUES('modelAliases', ?, ?)`, [alias, stringifyJson(target)]);
+    for (const [a, m] of Object.entries(payload.modelAliases || {})) {
+      db.run(`INSERT OR REPLACE INTO kv(scope, key, value) VALUES('modelAliases', ?, ?)`, [a, stringifyJson(m)]);
     }
     for (const m of payload.customModels || []) {
-      const key = `${m.providerAlias}|${m.id}`;
-      db.run(`INSERT OR REPLACE INTO kv(scope, key, value) VALUES('customModels', ?, ?)`, [key, stringifyJson(m)]);
+      const k = `${m.providerAlias}|${m.id}|${m.type || "llm"}`;
+      db.run(`INSERT OR REPLACE INTO kv(scope, key, value) VALUES('customModels', ?, ?)`, [k, stringifyJson(m)]);
     }
-    for (const [alias, full] of Object.entries(payload.mitmAlias || {})) {
-      db.run(`INSERT OR REPLACE INTO kv(scope, key, value) VALUES('mitmAlias', ?, ?)`, [alias, stringifyJson(full)]);
+    for (const [tool, mappings] of Object.entries(payload.mitmAlias || {})) {
+      db.run(`INSERT OR REPLACE INTO kv(scope, key, value) VALUES('mitmAlias', ?, ?)`, [tool, stringifyJson(mappings || {})]);
     }
     for (const [provider, models] of Object.entries(payload.pricing || {})) {
       db.run(`INSERT OR REPLACE INTO kv(scope, key, value) VALUES('pricing', ?, ?)`, [provider, stringifyJson(models || {})]);
@@ -260,4 +234,20 @@ export async function importDb(payload) {
       }
     }
   });
+
+  if (hasUsageHistory && global._recentRing) {
+    global._recentRing.items = [];
+    global._recentRing.initialized = false;
+  }
+  if (global._connectionMapCache) {
+    global._connectionMapCache.map = {};
+    global._connectionMapCache.ts = 0;
+  }
+
+  return await exportDb();
+}
+
+// Eager init helper (optional)
+export async function initDb() {
+  await getAdapter();
 }
