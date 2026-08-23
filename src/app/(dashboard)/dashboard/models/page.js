@@ -13,7 +13,7 @@ import { resolveModelsDevProviderId } from "@/lib/modelsDev/providerMap.js";
 import { formatModelMeta } from "@/shared/utils/modelMeta";
 import EditModelModal from "./EditModelModal";
 import { getInitialCollapsedGroupSet } from "./collapseState";
-import { createComboGroup, getComboModelPresentation, isGroupActive } from "./comboModels";
+import { createActiveProviderSet, createComboGroup, getComboModelPresentation, isGroupActive } from "./comboModels";
 
 const inputClass =
   "w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary";
@@ -250,17 +250,10 @@ export default function ModelsPage() {
     [pricing]
   );
 
-  const activeProviderAliases = useMemo(() => {
-    const set = new Set();
-    for (const c of connections) {
-      if (c.isActive !== false) {
-        const alias = getProviderAlias(c.provider) || c.provider;
-        if (alias) set.add(alias);
-        if (c.provider) set.add(c.provider);
-      }
-    }
-    return set;
-  }, [connections]);
+  const activeProviderAliases = useMemo(
+    () => createActiveProviderSet(connections),
+    [connections]
+  );
 
   const visibleGroups = useMemo(() => {
     const q = search.trim().toLowerCase();

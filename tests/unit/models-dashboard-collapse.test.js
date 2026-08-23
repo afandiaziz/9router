@@ -7,6 +7,7 @@ import {
   getInitialCollapsedGroupSet,
 } from "../../src/app/(dashboard)/dashboard/models/collapseState.js";
 import {
+  createActiveProviderSet,
   createComboGroup,
   getComboModelPresentation,
   isGroupActive,
@@ -112,6 +113,30 @@ describe("Models dashboard initial collapse", () => {
     expect(presentation.caps.tools).toBe(false);
     expect(presentation.override).toEqual({ contextWindow: 64000, tools: false });
     expect(presentation.pricing).toEqual({ input: 1, output: 2 });
+  });
+
+  it("includes only active compatible connection prefixes in active provider identities", () => {
+    const activeProviders = createActiveProviderSet([
+      {
+        provider: "openai-compatible-active",
+        isActive: true,
+        providerSpecificData: { prefix: "my-prefix" },
+      },
+      {
+        provider: "anthropic-compatible-inactive",
+        isActive: false,
+        providerSpecificData: { prefix: "inactive-prefix" },
+      },
+    ]);
+
+    expect(activeProviders.has("my-prefix")).toBe(true);
+    expect(activeProviders.has("inactive-prefix")).toBe(false);
+    expect(isGroupActive(createComboGroup([
+      { name: "compatible", models: ["my-prefix/model"] },
+    ]), activeProviders)).toBe(true);
+    expect(isGroupActive(createComboGroup([
+      { name: "inactive", models: ["inactive-prefix/model"] },
+    ]), activeProviders)).toBe(false);
   });
 
   it("treats a combo as active when at least one member provider is active", () => {

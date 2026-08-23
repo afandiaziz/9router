@@ -1,4 +1,5 @@
 import { getConservativeComboCapabilities } from "open-sse/providers/capabilities.js";
+import { getProviderAlias } from "@/shared/constants/providers";
 
 export function createComboGroup(combos = []) {
   const models = combos
@@ -23,6 +24,21 @@ export function createComboGroup(combos = []) {
     iconId: "combo",
     models,
   };
+}
+
+export function createActiveProviderSet(connections = []) {
+  const activeProviders = new Set();
+  for (const connection of connections) {
+    if (connection.isActive === false) continue;
+    if (connection.provider) {
+      activeProviders.add(connection.provider);
+      activeProviders.add(getProviderAlias(connection.provider) || connection.provider);
+    }
+    if (connection.providerSpecificData?.prefix) {
+      activeProviders.add(connection.providerSpecificData.prefix);
+    }
+  }
+  return activeProviders;
 }
 
 export function isGroupActive(group, activeProviderAliases) {
