@@ -12,6 +12,7 @@ import { invalidatePricingCache } from "@/shared/hooks/usePricing";
 import { resolveModelsDevProviderId } from "@/lib/modelsDev/providerMap.js";
 import { formatModelMeta } from "@/shared/utils/modelMeta";
 import EditModelModal from "./EditModelModal";
+import ComboManagement from "../combos/ComboManagement";
 
 const inputClass =
   "w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary";
@@ -402,6 +403,15 @@ export default function ModelsPage() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
+      <section className="flex min-w-0 flex-col gap-4" aria-labelledby="model-combos-heading">
+        <h2 id="model-combos-heading" className="text-lg font-semibold text-text-main">
+          Model Combos
+        </h2>
+        <ComboManagement />
+      </section>
+
+      <div className="border-t border-border-subtle" />
+
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-text-muted">
