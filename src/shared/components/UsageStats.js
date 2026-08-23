@@ -212,7 +212,6 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
   const [fetching, setFetching] = useState(false);
   const [tableView, setTableView] = useState("model");
   const [viewMode, setViewMode] = useState("tokens");
-<<<<<<< HEAD
   const switchViewMode = useCallback((mode) => {
     setViewMode(mode);
     setSortBy("rawModel");
@@ -222,8 +221,6 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
     params.delete("sortOrder");
     router.replace(`?${params.toString()}`, { scroll: false });
   }, [searchParams, router]);
-=======
->>>>>>> pr-3032
   const [providers, setProviders] = useState([]);
   const [periodLocal, setPeriodLocal] = useState("today");
   const isInitialLoad = useRef(true);

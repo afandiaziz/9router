@@ -601,7 +601,6 @@ export default function ProviderDetailPage() {
     }
   };
 
-<<<<<<< HEAD
   // Fetch Qoder model list and automatically add to available models
   const handleImportQoderModels = async () => {
     if (importingQoderModels) return;
@@ -656,8 +655,6 @@ export default function ProviderDetailPage() {
     }
   };
 
-=======
->>>>>>> pr-3032
   const handleRunOneByOneTest = async () => {
     if (oneByOneRunning || connections.length === 0) return;
 
