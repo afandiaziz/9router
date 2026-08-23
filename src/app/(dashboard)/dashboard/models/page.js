@@ -13,7 +13,7 @@ import { resolveModelsDevProviderId } from "@/lib/modelsDev/providerMap.js";
 import { formatModelMeta } from "@/shared/utils/modelMeta";
 import EditModelModal from "./EditModelModal";
 import { getInitialCollapsedGroupSet } from "./collapseState";
-import { createComboGroup, getComboModelPresentation } from "./comboModels";
+import { createComboGroup, getComboModelPresentation, isGroupActive } from "./comboModels";
 
 const inputClass =
   "w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary";
@@ -269,8 +269,7 @@ export default function ModelsPage() {
         if (providerFilter && group.key !== providerFilter) return null;
         if (
           scopeFilter === "active" &&
-          !activeProviderAliases.has(group.key) &&
-          !activeProviderAliases.has(group.providerId)
+          !isGroupActive(group, activeProviderAliases)
         ) {
           return null;
         }

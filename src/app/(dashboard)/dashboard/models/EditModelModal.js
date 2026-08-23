@@ -5,6 +5,7 @@ import PropTypes from "prop-types";
 import { Modal, Button } from "@/shared/components";
 import { invalidateModelCapsCache } from "@/shared/hooks/useModelCaps";
 import { invalidatePricingCache } from "@/shared/hooks/usePricing";
+import { deleteModelMutation, saveModelAlias } from "./modelMutations";
 
 const BOOL_CAPS = [
   ["vision", "Vision (image input)"],
@@ -58,19 +59,12 @@ export default function EditModelModal({ isOpen, onClose, model, onSaved }) {
     try {
       // 1. Alias
       const nextAlias = alias.trim();
-      if (nextAlias && nextAlias !== (model.alias || "")) {
-        const res = await fetch("/api/models/alias", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model: model.aliasKey, alias: nextAlias }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Failed to save alias");
-        }
-      } else if (!nextAlias && model.alias) {
-        await fetch(`/api/models/alias?alias=${encodeURIComponent(model.alias)}`, { method: "DELETE" });
-      }
+      await saveModelAlias({
+        fetchImpl: fetch,
+        aliasKey: model.aliasKey,
+        previousAlias: model.alias || "",
+        nextAlias,
+      });
 
       // 2. Capabilities override = diff vs static caps (empty diff removes the override)
       const override = {};
@@ -94,9 +88,10 @@ export default function EditModelModal({ isOpen, onClose, model, onSaved }) {
           throw new Error(data.error || "Failed to save capabilities");
         }
       } else if (model.override) {
-        await fetch(
+        await deleteModelMutation(
+          fetch,
           `/api/models/caps?provider=${encodeURIComponent(model.providerAlias)}&model=${encodeURIComponent(model.id)}`,
-          { method: "DELETE" }
+          "Failed to reset capabilities"
         );
       }
 
@@ -125,9 +120,10 @@ export default function EditModelModal({ isOpen, onClose, model, onSaved }) {
         }
       } else if (Object.keys(pricingPayload).length === 0 && Object.keys(currentPricing).length > 0) {
         // All fields cleared → drop the user override (static defaults still apply)
-        await fetch(
+        await deleteModelMutation(
+          fetch,
           `/api/pricing?provider=${encodeURIComponent(model.providerAlias)}&model=${encodeURIComponent(model.id)}`,
-          { method: "DELETE" }
+          "Failed to reset pricing"
         );
       }
 

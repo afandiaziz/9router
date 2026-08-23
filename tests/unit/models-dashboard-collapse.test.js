@@ -9,6 +9,7 @@ import {
 import {
   createComboGroup,
   getComboModelPresentation,
+  isGroupActive,
 } from "../../src/app/(dashboard)/dashboard/models/comboModels.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -111,6 +112,19 @@ describe("Models dashboard initial collapse", () => {
     expect(presentation.caps.tools).toBe(false);
     expect(presentation.override).toEqual({ contextWindow: 64000, tools: false });
     expect(presentation.pricing).toEqual({ input: 1, output: 2 });
+  });
+
+  it("treats a combo as active when at least one member provider is active", () => {
+    const activeProviders = new Set(["openai"]);
+    const comboGroup = createComboGroup([
+      { name: "mixed", models: ["anthropic/claude-3-haiku-20240307", "openai/gpt-4o"] },
+    ]);
+
+    expect(isGroupActive(comboGroup, activeProviders)).toBe(true);
+    expect(isGroupActive(createComboGroup([
+      { name: "inactive", models: ["anthropic/claude-3-haiku-20240307"] },
+    ]), activeProviders)).toBe(false);
+    expect(isGroupActive({ key: "openai", providerId: "openai" }, activeProviders)).toBe(true);
   });
 
   it("does not wire disable or delete actions for combo rows", () => {

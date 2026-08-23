@@ -25,6 +25,18 @@ export function createComboGroup(combos = []) {
   };
 }
 
+export function isGroupActive(group, activeProviderAliases) {
+  if (group.key !== "combo") {
+    return activeProviderAliases.has(group.key) || activeProviderAliases.has(group.providerId);
+  }
+  return group.models.some((combo) =>
+    combo.models.some((member) => {
+      const provider = typeof member === "string" ? member.split("/", 1)[0] : "";
+      return activeProviderAliases.has(provider);
+    })
+  );
+}
+
 export function getComboModelPresentation(row, capsOverrides = {}, pricing = {}) {
   const staticCaps = getConservativeComboCapabilities(row.models, capsOverrides);
   const override = capsOverrides[`combo|${row.id}`] || null;

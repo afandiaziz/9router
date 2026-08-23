@@ -54,6 +54,19 @@ describe("GET /api/models — caps overrides merge", () => {
     expect(model.capsOverridden).toBe(true);
   });
 
+  it("returns audio and video modality capabilities", async () => {
+    mocks.getCapsOverrides.mockResolvedValue({
+      "openai|gpt-4o": { audioInput: true, videoInput: true, audioOutput: true },
+    });
+
+    const response = await GET();
+    const model = response.body.models.find((m) => m.provider === "openai" && m.model === "gpt-4o");
+
+    expect(model.caps.audioInput).toBe(true);
+    expect(model.caps.videoInput).toBe(true);
+    expect(model.caps.audioOutput).toBe(true);
+  });
+
   it("keeps static caps without capsOverridden flag when no override exists", async () => {
     const response = await GET();
     const model = response.body.models.find((m) => m.provider === "openai" && m.model === "gpt-4o");

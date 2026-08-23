@@ -22,7 +22,17 @@ describe("combo alias routing", () => {
     );
   });
 
-  it("recognizes alias targets and returns the canonical combo name", async () => {
+  it("does not reinterpret a normal provider alias target as a combo basename", async () => {
+    mocks.getModelAliases.mockResolvedValue({ friendly: "openai/resilient" });
+
+    await expect(resolveComboRoute("friendly")).resolves.toBeNull();
+    await expect(getModelInfo("friendly")).resolves.toEqual({
+      provider: "openai",
+      model: "resilient",
+    });
+  });
+
+  it("recognizes explicit combo alias targets and returns the canonical combo name", async () => {
     await expect(resolveComboRoute("friendly")).resolves.toEqual({
       name: "resilient",
       models: ["openai/gpt-4o"],

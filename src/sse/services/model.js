@@ -34,9 +34,11 @@ export async function resolveModelAlias(alias) {
 
 export async function resolveComboRoute(modelStr) {
   const aliases = await getModelAliases();
-  const target = typeof aliases?.[modelStr] === "string" ? aliases[modelStr] : modelStr;
+  const aliasTarget = typeof aliases?.[modelStr] === "string" ? aliases[modelStr] : null;
+  const target = aliasTarget || modelStr;
   const candidates = [target];
-  if (target.includes("/")) candidates.push(target.slice(target.lastIndexOf("/") + 1));
+  if (aliasTarget?.startsWith("combo/")) candidates.push(aliasTarget.slice("combo/".length));
+  else if (!aliasTarget && target.includes("/")) candidates.push(target.slice(target.lastIndexOf("/") + 1));
 
   for (const name of candidates) {
     const combo = await getComboByName(name);

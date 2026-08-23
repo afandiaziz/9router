@@ -106,6 +106,33 @@ describe("GET /v1/models — caps overrides and model aliases", () => {
     expect(combo.capabilities.tools).toBe(false);
   });
 
+  it("gives an alias targeting a combo the canonical combo capabilities", async () => {
+    mocks.getCombos.mockResolvedValue([
+      {
+        id: "combo-alias",
+        name: "resilient",
+        models: ["openai/gpt-4o", "anthropic/claude-3-haiku-20240307"],
+      },
+    ]);
+    mocks.getModelAliases.mockResolvedValue({ friendly: "combo/resilient" });
+    mocks.getCapsOverrides.mockResolvedValue({
+      "openai|gpt-4o": { contextWindow: 128000, maxOutput: 8192, vision: true, tools: true },
+      "anthropic|claude-3-haiku-20240307": { contextWindow: 200000, maxOutput: 4096, vision: false, tools: true },
+      "combo|resilient": { contextWindow: 64000, tools: false },
+    });
+
+    const response = await GET(new Request("http://localhost:20128/v1/models"));
+    const data = await response.json();
+    const canonical = data.data.find((m) => m.id === "resilient");
+    const alias = data.data.find((m) => m.id === "friendly");
+
+    expect(alias.capabilities).toEqual(canonical.capabilities);
+    expect(alias.context_length).toBe(64000);
+    expect(alias.max_completion_tokens).toBe(4096);
+    expect(alias.capabilities.vision).toBe(false);
+    expect(alias.capabilities.tools).toBe(false);
+  });
+
   it("computes conservative minimum context and capabilities for combos", async () => {
     mocks.getCombos.mockResolvedValue([
       {
