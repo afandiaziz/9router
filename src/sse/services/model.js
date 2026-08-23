@@ -32,6 +32,19 @@ export async function resolveModelAlias(alias) {
   return resolveModelAliasFromMap(alias, aliases);
 }
 
+export async function resolveComboRoute(modelStr) {
+  const aliases = await getModelAliases();
+  const target = typeof aliases?.[modelStr] === "string" ? aliases[modelStr] : modelStr;
+  const candidates = [target];
+  if (target.includes("/")) candidates.push(target.slice(target.lastIndexOf("/") + 1));
+
+  for (const name of candidates) {
+    const combo = await getComboByName(name);
+    if (combo?.models?.length) return { name: combo.name, models: combo.models };
+  }
+  return null;
+}
+
 /**
  * Get full model info (parse or resolve)
  */
@@ -66,13 +79,9 @@ export async function getModelInfo(modelStr) {
     };
   }
 
-  // Check if this is a combo name before resolving as alias
-  // This prevents combo names from being incorrectly routed to providers
-  const combo = await getComboByName(parsed.model);
-  if (combo) {
-    // Return null provider to signal this should be handled as combo
-    // The caller (handleChat) will detect this and handle it as combo
-    return { provider: null, model: parsed.model };
+  const comboRoute = await resolveComboRoute(modelStr);
+  if (comboRoute) {
+    return { provider: null, model: comboRoute.name, comboName: comboRoute.name };
   }
 
   return getModelInfoCore(modelStr, getModelAliases);
@@ -83,15 +92,5 @@ export async function getModelInfo(modelStr) {
  * @returns {Promise<string[]|null>} Array of models or null if not a combo
  */
 export async function getComboModels(modelStr) {
-  // Resolve combo by full name first, then by basename (part after the last
-  // slash) so client configs like `provider/combo-name` still hit the combo
-  // instead of forwarding the raw string to the upstream provider.
-  let combo = await getComboByName(modelStr);
-  if (!combo && modelStr.includes("/")) {
-    combo = await getComboByName(modelStr.split("/").pop());
-  }
-  if (combo && combo.models && combo.models.length > 0) {
-    return combo.models;
-  }
-  return null;
+  return (await resolveComboRoute(modelStr))?.models || null;
 }

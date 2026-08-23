@@ -383,8 +383,10 @@ export async function buildModelsList(kindFilter, options = {}) {
       // Conservative minimal capabilities: minimum context window, minimum max output,
       // and intersection (all must support) for boolean modalities (vision, tools, reasoning).
       const comboModelsList = Array.isArray(combo.models) ? combo.models : [];
-      const comboCaps = getConservativeComboCapabilities(comboModelsList, capsOverrides);
-      if (comboCaps) {
+      const baseComboCaps = getConservativeComboCapabilities(comboModelsList, capsOverrides);
+      const comboOverride = capsOverrides[`combo|${combo.name}`];
+      const comboCaps = { ...(baseComboCaps || {}), ...(comboOverride || {}) };
+      if (Object.keys(comboCaps).length > 0) {
         entry.capabilities = comboCaps;
         if (Number.isFinite(comboCaps.contextWindow)) entry.context_length = comboCaps.contextWindow;
         if (Number.isFinite(comboCaps.maxOutput)) entry.max_completion_tokens = comboCaps.maxOutput;

@@ -13,6 +13,8 @@ const BOOL_CAPS = [
   ["pdf", "PDF input"],
   ["imageOutput", "Image output"],
   ["audioInput", "Audio input"],
+  ["videoInput", "Video input"],
+  ["audioOutput", "Audio output"],
 ];
 
 const PRICE_FIELDS = [

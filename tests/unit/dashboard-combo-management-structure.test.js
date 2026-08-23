@@ -37,23 +37,12 @@ describe("shared dashboard combo management", () => {
     expect(source).not.toContain("function ComboCard");
   });
 
-  it("mounts shared combo management independently before catalog loading", () => {
+  it("keeps combo management out of the models page and loads combos as model data", () => {
     const source = readFileSync(modelsPagePath, "utf8");
-    const pageBody = source.slice(source.indexOf("export default function ModelsPage"));
-    const comboPosition = pageBody.indexOf("<ComboManagement />");
-    const rootReturnPosition = pageBody.lastIndexOf("\n  return (", comboPosition);
-    const catalogLoadingPosition = pageBody.indexOf("{loading ? (");
-    const catalogPosition = pageBody.indexOf("{/* Header */}");
 
-    expect(source).toContain(
-      'import ComboManagement from "../combos/ComboManagement"'
-    );
-    expect(source).toContain("Model Combos");
-    expect(pageBody).not.toMatch(/if\s*\(\s*loading\s*\)\s*\{\s*return\s*\(/);
-    expect(rootReturnPosition).toBeGreaterThan(-1);
-    expect(comboPosition).toBeGreaterThan(rootReturnPosition);
-    expect(catalogLoadingPosition).toBeGreaterThan(comboPosition);
-    expect(catalogPosition).toBeGreaterThan(catalogLoadingPosition);
-    expect(source).not.toContain('fetch("/api/combos")');
+    expect(source).not.toContain("ComboManagement");
+    expect(source).not.toContain('aria-labelledby="model-combos-heading"');
+    expect(source).toContain('fetch("/api/combos")');
+    expect(source).toContain("setCombos(data.combos || [])");
   });
 });

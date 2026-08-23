@@ -12,8 +12,8 @@ import { invalidatePricingCache } from "@/shared/hooks/usePricing";
 import { resolveModelsDevProviderId } from "@/lib/modelsDev/providerMap.js";
 import { formatModelMeta } from "@/shared/utils/modelMeta";
 import EditModelModal from "./EditModelModal";
-import ComboManagement from "../combos/ComboManagement";
 import { getInitialCollapsedGroupSet } from "./collapseState";
+import { createComboGroup, getComboModelPresentation } from "./comboModels";
 
 const inputClass =
   "w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary";
@@ -23,6 +23,7 @@ export default function ModelsPage() {
   const [connections, setConnections] = useState([]);
   const [providerNodes, setProviderNodes] = useState([]);
   const [customModels, setCustomModels] = useState([]);
+  const [combos, setCombos] = useState([]);
   const [disabledMap, setDisabledMap] = useState({});
   const [aliasByModel, setAliasByModel] = useState({});
   const [pricing, setPricing] = useState({});
@@ -41,8 +42,9 @@ export default function ModelsPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [customRes, disabledRes, aliasRes, pricingRes, capsRes, mdRes, provRes, nodesRes] = await Promise.all([
+      const [customRes, combosRes, disabledRes, aliasRes, pricingRes, capsRes, mdRes, provRes, nodesRes] = await Promise.all([
         fetch("/api/models/custom"),
+        fetch("/api/combos"),
         fetch("/api/models/disabled"),
         fetch("/api/models/alias"),
         fetch("/api/pricing"),
@@ -54,6 +56,10 @@ export default function ModelsPage() {
       if (customRes.ok) {
         const data = await customRes.json();
         setCustomModels(data.models || []);
+      }
+      if (combosRes.ok) {
+        const data = await combosRes.json();
+        setCombos(data.combos || []);
       }
       if (disabledRes.ok) {
         const data = await disabledRes.json();
@@ -202,8 +208,10 @@ export default function ModelsPage() {
     }
 
     for (const group of map.values()) group.models.sort((a, b) => a.id.localeCompare(b.id));
-    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [customModels, getProviderInfo]);
+    const comboGroup = createComboGroup(combos);
+    const providerGroups = [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+    return comboGroup.models.length > 0 ? [comboGroup, ...providerGroups] : providerGroups;
+  }, [customModels, combos, getProviderInfo]);
 
   useEffect(() => {
     const initialCollapsedGroups = getInitialCollapsedGroupSet({
@@ -308,22 +316,28 @@ export default function ModelsPage() {
     setCollapsedGroups(new Set());
   };
 
-  const openEdit = (row) => {
+  const getPresentationFor = useCallback((row) => {
+    if (row.isCombo) return getComboModelPresentation(row, capsOverrides, pricing);
     const staticCaps = getCapabilitiesForModel(row.isCustom ? row.providerAlias : row.providerId, row.id) || {};
     const effectiveCaps = getCaps(`${row.providerAlias}/${row.id}`) || {};
-    const aliasKey = row.isCustom ? `${row.providerAlias}/${row.id}` : `${row.providerId}/${row.id}`;
     const override =
       capsOverrides[`${row.providerAlias}|${row.id}`] ||
       (row.providerId ? capsOverrides[`${row.providerId}|${row.id}`] : null) ||
       null;
-    setEditing({
-      ...row,
-      aliasKey,
-      alias: getAliasFor(row),
+    return {
+      aliasKey: row.isCustom ? `${row.providerAlias}/${row.id}` : `${row.providerId}/${row.id}`,
       staticCaps,
       caps: { ...staticCaps, ...effectiveCaps },
       override,
       pricing: getPricingFor(row),
+    };
+  }, [capsOverrides, getCaps, getPricingFor, pricing]);
+
+  const openEdit = (row) => {
+    setEditing({
+      ...row,
+      ...getPresentationFor(row),
+      alias: getAliasFor(row),
     });
   };
 
@@ -408,15 +422,6 @@ export default function ModelsPage() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
-      <section className="flex min-w-0 flex-col gap-4" aria-labelledby="model-combos-heading">
-        <h2 id="model-combos-heading" className="text-lg font-semibold text-text-main">
-          Model Combos
-        </h2>
-        <ComboManagement />
-      </section>
-
-      <div className="border-t border-border-subtle" />
-
       {loading ? (
         <div className="flex flex-col gap-6">
           <CardSkeleton />
@@ -551,13 +556,13 @@ export default function ModelsPage() {
                     <ModelRow
                       key={row.key}
                       row={row}
-                      caps={getCaps(`${row.providerAlias}/${row.id}`)}
+                      caps={row.isCombo ? getPresentationFor(row).caps : getCaps(`${row.providerAlias}/${row.id}`)}
                       alias={getAliasFor(row)}
-                      disabled={isDisabled(row)}
-                      price={getPricingFor(row)}
+                      disabled={row.isCombo ? false : isDisabled(row)}
+                      price={row.isCombo ? getPresentationFor(row).pricing : getPricingFor(row)}
                       onEdit={() => openEdit(row)}
-                      onToggleDisabled={() => handleToggleDisabled(row, isDisabled(row))}
-                      onDelete={row.isCustom ? () => handleDeleteCustom(row) : null}
+                      onToggleDisabled={row.isCombo ? null : () => handleToggleDisabled(row, isDisabled(row))}
+                      onDelete={!row.isCombo && row.isCustom ? () => handleDeleteCustom(row) : null}
                     />
                   ))}
                 </div>
@@ -624,15 +629,17 @@ function ModelRow({ row, caps, alias, disabled, price, onEdit, onToggleDisabled,
         >
           <span className="material-symbols-outlined text-base">edit</span>
         </button>
-        <button
-          onClick={onToggleDisabled}
-          title={disabled ? "Enable model" : "Disable model"}
-          className="p-1.5 hover:bg-sidebar rounded text-text-muted hover:text-primary"
-        >
-          <span className="material-symbols-outlined text-base">
-            {disabled ? "visibility" : "visibility_off"}
-          </span>
-        </button>
+        {onToggleDisabled && (
+          <button
+            onClick={onToggleDisabled}
+            title={disabled ? "Enable model" : "Disable model"}
+            className="p-1.5 hover:bg-sidebar rounded text-text-muted hover:text-primary"
+          >
+            <span className="material-symbols-outlined text-base">
+              {disabled ? "visibility" : "visibility_off"}
+            </span>
+          </button>
+        )}
         {onDelete && (
           <button
             onClick={onDelete}
@@ -655,12 +662,13 @@ ModelRow.propTypes = {
     id: PropTypes.string,
     name: PropTypes.string,
     isCustom: PropTypes.bool,
+    isCombo: PropTypes.bool,
   }).isRequired,
   caps: PropTypes.object,
   alias: PropTypes.string,
   disabled: PropTypes.bool,
   price: PropTypes.object,
   onEdit: PropTypes.func.isRequired,
-  onToggleDisabled: PropTypes.func.isRequired,
+  onToggleDisabled: PropTypes.func,
   onDelete: PropTypes.func,
 };

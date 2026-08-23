@@ -62,6 +62,9 @@ const pickCaps = (c) => ({
   tools: c.tools,
   pdf: c.pdf,
   imageOutput: c.imageOutput,
+  audioInput: c.audioInput,
+  videoInput: c.videoInput,
+  audioOutput: c.audioOutput,
   contextWindow: c.contextWindow,
   maxOutput: c.maxOutput,
 });
