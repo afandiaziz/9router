@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import PropTypes from "prop-types";
 import { Card, Button, CardSkeleton, ConfirmModal, CapacityBadges, SegmentedControl } from "@/shared/components";
 import ProviderIcon from "@/shared/components/ProviderIcon";
@@ -13,6 +13,7 @@ import { resolveModelsDevProviderId } from "@/lib/modelsDev/providerMap.js";
 import { formatModelMeta } from "@/shared/utils/modelMeta";
 import EditModelModal from "./EditModelModal";
 import ComboManagement from "../combos/ComboManagement";
+import { createCollapsedGroupSet } from "./collapseState";
 
 const inputClass =
   "w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary";
@@ -31,6 +32,7 @@ export default function ModelsPage() {
   const [providerFilter, setProviderFilter] = useState("");
   const [scopeFilter, setScopeFilter] = useState("all"); // "all" | "active"
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
+  const initialCollapseAppliedRef = useRef(false);
   const [editing, setEditing] = useState(null);
   const [confirmState, setConfirmState] = useState(null);
   const [mdAction, setMdAction] = useState({});
@@ -202,6 +204,13 @@ export default function ModelsPage() {
     for (const group of map.values()) group.models.sort((a, b) => a.id.localeCompare(b.id));
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [customModels, getProviderInfo]);
+
+  useEffect(() => {
+    if (initialCollapseAppliedRef.current || groups.length === 0) return;
+
+    setCollapsedGroups(createCollapsedGroupSet(groups));
+    initialCollapseAppliedRef.current = true;
+  }, [groups]);
 
   const catalogIds = useMemo(
     () => new Set((modelsDev?.providers || []).map((p) => p.id)),
@@ -508,6 +517,8 @@ export default function ModelsPage() {
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <button
                   onClick={() => toggleGroupCollapse(group.key)}
+                  aria-expanded={!isCollapsed}
+                  aria-controls={`models-${group.key}`}
                   className="flex items-center gap-2 min-w-0 text-left hover:opacity-80 transition-opacity flex-1 py-1 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-lg text-text-muted">
@@ -532,7 +543,7 @@ export default function ModelsPage() {
               {action?.message && <p className="text-xs text-green-600 my-2">{action.message}</p>}
               {action?.error && <p className="text-xs text-red-500 my-2">{action.error}</p>}
               {!isCollapsed && (
-                <div className="flex flex-col gap-1.5 mt-3">
+                <div id={`models-${group.key}`} className="flex flex-col gap-1.5 mt-3">
                   {group.models.map((row) => (
                     <ModelRow
                       key={row.key}
