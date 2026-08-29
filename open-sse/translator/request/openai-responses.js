@@ -326,6 +326,7 @@ function resolveMaxOutputTokens(body) {
  * Convert OpenAI Chat Completions to OpenAI Responses API format
  */
 export function openaiToOpenAIResponsesRequest(model, body, stream, credentials) {
+<<<<<<< HEAD
   // Body already in Responses API format (e.g. Cursor CLI calling /chat/completions with input[]).
   // Respect the caller's stream intent (undefined keeps the historical streaming default);
   // normalize token fields and tool_choice without rebuilding/altering `input`.
@@ -342,6 +343,18 @@ export function openaiToOpenAIResponsesRequest(model, body, stream, credentials)
     if (toolChoice !== undefined) passthrough.tool_choice = toolChoice;
     passthrough.stream = stream !== false;
     return passthrough;
+=======
+  // Body already in Responses API format (e.g. Cursor CLI calling /chat/completions with input[])
+  if (body.input) {
+    const out = { ...body, model, stream: true };
+    if (out.max_output_tokens === undefined) {
+      if (out.max_completion_tokens !== undefined) out.max_output_tokens = out.max_completion_tokens;
+      else if (out.max_tokens !== undefined) out.max_output_tokens = out.max_tokens;
+    }
+    delete out.max_tokens;
+    delete out.max_completion_tokens;
+    return out;
+>>>>>>> v0.5.59
   }
 
   const result = {
@@ -458,12 +471,22 @@ export function openaiToOpenAIResponsesRequest(model, body, stream, credentials)
 
   // Pass through other relevant fields
   if (body.temperature !== undefined) result.temperature = body.temperature;
+<<<<<<< HEAD
   // Responses schema only knows max_output_tokens. Explicit precedence:
   // max_output_tokens > max_completion_tokens > max_tokens (fresh object — no legacy leak).
   const maxOut = resolveMaxOutputTokens(body);
   if (maxOut !== undefined) result.max_output_tokens = maxOut;
   const toolChoice = normalizeToolChoice(body.tool_choice);
   if (toolChoice !== undefined) result.tool_choice = toolChoice;
+=======
+  if (body.max_output_tokens !== undefined) {
+    result.max_output_tokens = body.max_output_tokens;
+  } else if (body.max_completion_tokens !== undefined) {
+    result.max_output_tokens = body.max_completion_tokens;
+  } else if (body.max_tokens !== undefined) {
+    result.max_output_tokens = body.max_tokens;
+  }
+>>>>>>> v0.5.59
   if (body.top_p !== undefined) result.top_p = body.top_p;
   if (body.reasoning !== undefined) result.reasoning = body.reasoning;
   if (body.reasoning_effort !== undefined) result.reasoning = { effort: body.reasoning_effort, summary: "auto" };

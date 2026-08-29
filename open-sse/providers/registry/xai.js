@@ -27,12 +27,17 @@ export default {
     refreshUrl: "https://auth.x.ai/oauth2/token",
   },
   models: [
+<<<<<<< HEAD
     { id: "grok-4.5", name: "Grok 4.5" },
     { id: "grok-build-0.1", name: "Grok Build 0.1" },
     { id: "grok-4.3", name: "Grok 4.3" },
     { id: "grok-4.20-0309-reasoning", name: "Grok 4.20 0309 Reasoning" },
     { id: "grok-4.20-0309-non-reasoning", name: "Grok 4.20 0309 Non-Reasoning" },
     { id: "grok-4.20-multi-agent-0309", name: "Grok 4.20 Multi-Agent 0309" },
+=======
+    { id: "grok-4.6", name: "Grok 4.6" },
+    { id: "grok-4.5", name: "Grok 4.5" },
+>>>>>>> v0.5.59
     { id: "grok-4", name: "Grok 4" },
     { id: "grok-4-fast-reasoning", name: "Grok 4 Fast Reasoning" },
     { id: "grok-code-fast-1", name: "Grok Code Fast" },

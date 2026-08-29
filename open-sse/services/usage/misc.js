@@ -5,11 +5,8 @@
 import { proxyAwareFetch } from "../../utils/proxyFetch.js";
 import { U } from "./shared.js";
 
-// GLM quota endpoints (region-aware) — url from registry transport.usage
-const GLM_QUOTA_URLS = {
-  international: U("glm").url,
-  china: U("glm-cn").url,
-};
+export { getGlmUsage } from "./glm.js";
+
 
 // Vercel AI Gateway credits endpoint
 // Returns { balance: "95.50", total_used: "4.50" } (USD as decimal strings).
@@ -128,14 +125,8 @@ export async function getOllamaUsage(apiKey, providerSpecificData, proxyOptions 
   }
 }
 
-/**
- * GLM Coding Plan usage (international + China regions)
- */
-export async function getGlmUsage(apiKey, provider, proxyOptions = null) {
-  if (!apiKey) {
-    return { message: "GLM API key not available." };
-  }
 
+<<<<<<< HEAD
   const region = provider === "glm-cn" ? "china" : "international";
   const quotaUrl = GLM_QUOTA_URLS[region] || "https://api.z.ai/api/monitor/usage/quota/limit";
 
@@ -187,6 +178,8 @@ export async function getGlmUsage(apiKey, provider, proxyOptions = null) {
     return { message: `GLM error: ${error.message}` };
   }
 }
+=======
+>>>>>>> v0.5.59
 
 /**
  * OpenCode Go usage (Rolling, Weekly, Monthly limits)
