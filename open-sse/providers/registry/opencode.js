@@ -20,15 +20,9 @@ export default {
     noAuth: true,
   },
   models: [
-<<<<<<< HEAD
-    // Exception to the dynamic catalog: Muse Spark 1.2 Contributor Free is
-    // Responses-only on https://opencode.ai/zen/v1/responses (@ai-sdk/openai).
-    { id: "muse-spark-1.2-contributor-free", name: "Muse Spark 1.2 Contributor Free", targetFormat: "openai-responses", supportedFormats: ["openai-responses"] },
-=======
     // Only this model is served by /zen/v1/responses; the rest stay on
     // /chat/completions, so the format is declared per-model, not per-provider.
     { id: "muse-spark-1.2-contributor-free", name: "Muse Spark 1.2 Contributor Free", targetFormat: "openai-responses" },
->>>>>>> v0.5.59
   ],
   modelsFetcher: { url: "https://opencode.ai/zen/v1/models", type: "opencode-free" },
   passthroughModels: true,
