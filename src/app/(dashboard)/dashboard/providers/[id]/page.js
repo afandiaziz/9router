@@ -22,6 +22,7 @@ import { CONNECTIONS_PER_PAGE, CONNECTIONS_MAX_PAGE_SIZE, computeConnectionPagin
 import AddApiKeyModal from "./AddApiKeyModal";
 import EditCompatibleNodeModal from "./EditCompatibleNodeModal";
 import AddCustomModelModal from "./AddCustomModelModal";
+import ImportModelsModal from "./ImportModelsModal";
 import BulkImportCodexModal from "./BulkImportCodexModal";
 import BulkImportGrokCliModal from "./BulkImportGrokCliModal";
 
