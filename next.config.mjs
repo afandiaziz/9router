@@ -56,7 +56,21 @@ const nextConfig = {
     config.watchOptions = {
       ...config.watchOptions,
       aggregateTimeout: 300,
-      ignored: /[\\/](node_modules|\.git|logs|\.next|\.next-cli-build|gitbook|cli|open-sse\.old|tests|docs)[\\/]/,
+      ignored: /[/\\](node_modules|\.git|logs|\.next|\.next-cli-build|gitbook|cli|open-sse\.old|tests|docs)[/\\]/,
+    };
+    // Reduce memory pressure for builds running on limited CI runners
+    if (!config.optimization) config.optimization = {};
+    config.optimization.splitChunks = {
+      chunks: 'all',
+      cacheGroups: {
+        default: false,
+        vendors: false,
+      },
+      minSize: 50000,
+    };
+    config.performance = {
+      ...config.performance,
+      hints: false,
     };
     return config;
   },

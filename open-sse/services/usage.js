@@ -17,8 +17,14 @@ import { getDeepseekUsage } from "./usage/deepseek.js";
 import { getZedUsage } from "./usage/zed.js";
 import { resolveQoderCredentials } from "./qoderModels.js";
 import { getGlmUsage } from "./usage/glm.js";
-import { getOpencodeGoUsage, getCommandCodeUsage } from "./usage/misc.js";
 import {
+  getIflowUsage,
+  getOllamaUsage,
+  getVercelAiGatewayUsage,
+  getQoderUsage,
+  getOpencodeGoUsage,
+  getCommandCodeUsage,
+} from "./usage/misc.js";
 
 /**
  * Get usage data for a provider connection
@@ -55,6 +61,7 @@ const USAGE_HANDLERS = {
   ocg: (c) => getOpencodeGoUsage(c.apiKey, c.proxyOptions),
   "opencode-go": (c) => getOpencodeGoUsage(c.apiKey, c.proxyOptions),
   commandcode: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
+  cmc: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
 };
 
 export async function getUsageForProvider(connection, proxyOptions = null, options = {}) {
