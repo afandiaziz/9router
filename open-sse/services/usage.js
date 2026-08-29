@@ -1,20 +1,60 @@
-// Merge strategy: take both intents where possible
-import { PROVIDERS } from "./registry.js";
-import { toFiniteNumber } from "../shared/utils/toFiniteNumber.js";
-import { U, resolveProviderBaseUrl, resolveProxyOptions } from "./resolveUtils.js";
-import { proxyAwareFetch } from "../../utils/proxyFetch.js";
-import { getGlmUsage } from "./glm.js";
-import { getOpencodeGoUsage } from "./opencode.go.js";
-import { getCommandCodeUsage } from "./misc.js";
-import { getZedUsage } from "./zed.js";
+/**
+ * Usage Fetcher - Get usage data from provider APIs
+ */
 
-export const USAGE_HANDLERS = {
-  antigravity: (c) => c.accessToken ? getOpencodeGoUsage(c.accessToken, c.proxyOptions) : { message: "Antigravity usage requires OAuth" },
+import { getGitHubUsage } from "./usage/github.js";
+import { getGeminiUsage, getAntigravityUsage } from "./usage/google.js";
+import { getClaudeUsage } from "./usage/claude.js";
+import { getCodexUsage, consumeCodexRateLimitResetCredit, getCodexRateLimitResetCredits } from "./usage/codex.js";
+
+export { consumeCodexRateLimitResetCredit, getCodexRateLimitResetCredits };
+import { getKiroUsage } from "./usage/kiro.js";
+import { getMiniMaxUsage } from "./usage/minimax.js";
+import { getCodeBuddyCnUsage, getCodeBuddyIntlUsage } from "./usage/codebuddy-cn.js";
+import { getGrokCliUsage } from "./usage/grok-cli.js";
+import { getKimiUsage } from "./usage/kimi.js";
+import { getDeepseekUsage } from "./usage/deepseek.js";
+import { getZedUsage } from "./usage/zed.js";
+import { resolveQoderCredentials } from "./qoderModels.js";
+import { getGlmUsage } from "./usage/glm.js";
+import { getOpencodeGoUsage, getCommandCodeUsage } from "./usage/misc.js";
+import {
+
+/**
+ * Get usage data for a provider connection
+ * @param {Object} connection - Provider connection with accessToken
+ * @returns {Object} Usage data with quotas
+ */
+// provider → usage handler (ctx carries every arg each handler needs)
+const USAGE_HANDLERS = {
+  github: (c) => getGitHubUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+  "gemini-cli": (c) => getGeminiUsage(c.accessToken, c.providerDataWithProjectId, c.proxyOptions),
+  antigravity: (c) => getAntigravityUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+  claude: (c) => getClaudeUsage(c.accessToken, c.proxyOptions, { force: c.force }),
+  codex: (c) => getCodexUsage(c.accessToken, c.proxyOptions),
+  kiro: (c) => getKiroUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+  qoder: async (c) => {
+    // PAT (pt-...) connections must be exchanged to a job token before the
+    // quota endpoint accepts them.
+    const resolved = await resolveQoderCredentials(c, c.proxyOptions).catch(() => null);
+    return getQoderUsage(resolved?.accessToken || c.accessToken, c.proxyOptions);
+  },
+  iflow: (c) => getIflowUsage(c.accessToken),
+  ollama: (c) => getOllamaUsage(c.apiKey, c.providerSpecificData, c.proxyOptions),
+  glm: (c) => getGlmUsage(c.apiKey, c.provider, c.proxyOptions),
+  "glm-cn": (c) => getGlmUsage(c.apiKey, c.provider, c.proxyOptions),
+  minimax: (c) => getMiniMaxUsage(c.apiKey, c.provider, c.proxyOptions),
+  "minimax-cn": (c) => getMiniMaxUsage(c.apiKey, c.provider, c.proxyOptions),
+  "vercel-ai-gateway": (c) => getVercelAiGatewayUsage(c.apiKey, c.proxyOptions),
+  "codebuddy-cn": (c) => getCodeBuddyCnUsage(c.accessToken, c.apiKey, c.providerSpecificData, c.proxyOptions),
+  "codebuddy-intl": (c) => getCodeBuddyIntlUsage(c.accessToken, c.apiKey, c.providerSpecificData, c.proxyOptions),
+  "grok-cli": (c) => getGrokCliUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+  kimi: (c) => getKimiUsage(c.accessToken, c.apiKey, c.proxyOptions, c.providerSpecificData),
+  deepseek: (c) => getDeepseekUsage(c.apiKey, c.proxyOptions),
+  zed: (c) => getZedUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
   ocg: (c) => getOpencodeGoUsage(c.apiKey, c.proxyOptions),
   "opencode-go": (c) => getOpencodeGoUsage(c.apiKey, c.proxyOptions),
   commandcode: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
-  cmc: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
-  zed: (c) => getZedUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
 };
 
 export async function getUsageForProvider(connection, proxyOptions = null, options = {}) {
