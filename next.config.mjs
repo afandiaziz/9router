@@ -40,8 +40,8 @@ const nextConfig = {
     proxyClientMaxBodySize,
     // Cache fetch responses across HMR refreshes for faster dev reloads.
     serverComponentsHmrCache: true,
-    // Tree-shake heavy barrel imports to cut compile + bundle size
-    optimizePackageImports: ["@xyflow/react", "@dnd-kit/core", "@dnd-kit/sortable", "material-symbols", "marked"],
+    // Disabled: this build currently OOMs in webpack compile on Windows/CI-sized heaps.
+    // optimizePackageImports: ["@xyflow/react", "@dnd-kit/core", "@dnd-kit/sortable", "material-symbols", "marked"],
   },
   webpack: (config, { isServer }) => {
     // Ignore fs/path modules in browser bundle
@@ -57,20 +57,6 @@ const nextConfig = {
       ...config.watchOptions,
       aggregateTimeout: 300,
       ignored: /[/\\](node_modules|\.git|logs|\.next|\.next-cli-build|gitbook|cli|open-sse\.old|tests|docs)[/\\]/,
-    };
-    // Reduce memory pressure for builds running on limited CI runners
-    if (!config.optimization) config.optimization = {};
-    config.optimization.splitChunks = {
-      chunks: 'all',
-      cacheGroups: {
-        default: false,
-        vendors: false,
-      },
-      minSize: 50000,
-    };
-    config.performance = {
-      ...config.performance,
-      hints: false,
     };
     return config;
   },
