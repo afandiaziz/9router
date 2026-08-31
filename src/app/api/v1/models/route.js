@@ -383,8 +383,10 @@ export async function buildModelsList(kindFilter, options = {}) {
       // Conservative minimal capabilities: minimum context window, minimum max output,
       // and intersection (all must support) for boolean modalities (vision, tools, reasoning).
       const comboModelsList = Array.isArray(combo.models) ? combo.models : [];
-      const comboCaps = getConservativeComboCapabilities(comboModelsList, capsOverrides);
-      if (comboCaps) {
+      const baseComboCaps = getConservativeComboCapabilities(comboModelsList, capsOverrides);
+      const comboOverride = capsOverrides[`combo|${combo.name}`];
+      const comboCaps = { ...(baseComboCaps || {}), ...(comboOverride || {}) };
+      if (Object.keys(comboCaps).length > 0) {
         entry.capabilities = comboCaps;
         if (Number.isFinite(comboCaps.contextWindow)) entry.context_length = comboCaps.contextWindow;
         if (Number.isFinite(comboCaps.maxOutput)) entry.max_completion_tokens = comboCaps.maxOutput;
@@ -650,8 +652,14 @@ export async function buildModelsList(kindFilter, options = {}) {
         ? [targetModel.slice(0, targetModel.indexOf("/")), targetModel.slice(targetModel.indexOf("/") + 1)]
         : [null, targetModel];
       if (targetProvider && targetId) {
+        const targetCombo = targetProvider === "combo"
+          ? combos.find((combo) => combo.name === targetId && comboMatchesKinds(combo, kindFilter))
+          : null;
         const targetOverride = capsOverrides[`${targetProvider}|${targetId}`];
-        const targetCaps = { ...(getCapabilitiesForModel(targetProvider, targetId) || {}), ...(targetOverride || {}) };
+        const targetBaseCaps = targetCombo
+          ? getConservativeComboCapabilities(targetCombo.models || [], capsOverrides)
+          : getCapabilitiesForModel(targetProvider, targetId);
+        const targetCaps = { ...(targetBaseCaps || {}), ...(targetOverride || {}) };
         if (Number.isFinite(targetCaps.contextWindow)) aliasEntry.context_length = targetCaps.contextWindow;
         if (Number.isFinite(targetCaps.maxOutput)) aliasEntry.max_completion_tokens = targetCaps.maxOutput;
         if (Object.keys(targetCaps).length > 0) aliasEntry.capabilities = targetCaps;

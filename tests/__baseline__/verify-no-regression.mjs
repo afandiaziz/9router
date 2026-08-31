@@ -12,9 +12,16 @@ const resultsPath = process.argv[2];
 if (!resultsPath) { console.error("Missing results.json path"); process.exit(2); }
 
 const r = JSON.parse(readFileSync(resultsPath, "utf8"));
+function normalizeTestPath(fileName) {
+  const normalized = String(fileName || "").replaceAll("\\", "/");
+  const testsIndex = normalized.lastIndexOf("/tests/");
+  if (testsIndex !== -1) return normalized.slice(testsIndex + 1);
+  return normalized.replace(/^\/app\//, "");
+}
+
 const nowFails = r.testResults.flatMap(f =>
   f.assertionResults.filter(a => a.status === "failed")
-    .map(a => f.name.split("/app/")[1] + " :: " + a.fullName)
+    .map(a => normalizeTestPath(f.name) + " :: " + a.fullName)
 );
 
 // Regression = fail bây giờ NHƯNG không có trong baseline known-fails
