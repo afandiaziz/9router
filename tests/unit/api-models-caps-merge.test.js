@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getModelAliases: vi.fn(),
   getDisabledModels: vi.fn(),
   getCapsOverrides: vi.fn(),
+  getCustomModels: vi.fn(),
 }));
 
 vi.mock("next/server", () => ({
@@ -14,6 +15,7 @@ vi.mock("next/server", () => ({
 vi.mock("@/models", () => ({
   getModelAliases: mocks.getModelAliases,
   setModelAlias: vi.fn(),
+  getCustomModels: mocks.getCustomModels,
 }));
 
 vi.mock("@/lib/disabledModelsDb", () => ({
@@ -32,6 +34,7 @@ describe("GET /api/models — caps overrides merge", () => {
     mocks.getModelAliases.mockResolvedValue({});
     mocks.getDisabledModels.mockResolvedValue({});
     mocks.getCapsOverrides.mockResolvedValue({});
+    mocks.getCustomModels.mockResolvedValue([]);
   });
 
   it("applies overrides on top of static caps and flags the model", async () => {

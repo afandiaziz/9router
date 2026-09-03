@@ -422,6 +422,10 @@ export function openaiToKiroRequest(model, body, stream, credentials) {
   if (profileArn) {
     payload.profileArn = profileArn;
   }
+  // Fork contract: Kiro CLI/KAS accepts thinking budget + agentic prompt as
+  // top-level systemPrompt (in addition to the content fallback). Upstream
+  // v0.5.65 removed this as "redundant", but fork tests (openai-to-kiro,
+  // kiro-terminal-integrity) depend on it — keep it.
   if (systemPrompt) payload.systemPrompt = systemPrompt;
   if (additionalModelRequestFields) {
     payload.additionalModelRequestFields = additionalModelRequestFields;

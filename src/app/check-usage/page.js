@@ -65,6 +65,14 @@ function Chip({ text }) {
   );
 }
 
+/* Compact number for single-line stat sub rows: 1234 -> "1,234", 351200 -> "351.2K" */
+function compactNum(n) {
+  const v = n || 0;
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (v >= 10_000) return `${(v / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+  return v.toLocaleString();
+}
+
 /* ---- Stat card icons (stroke matches brutal.css line weight) ---- */
 const iconProps = {
   width: 18,
@@ -345,7 +353,7 @@ export default function CheckUsagePage() {
               </div>
 
               {/* Stat grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <StatCard
                   icon={StatIcons.requests}
                   label="Total Requests"
@@ -358,7 +366,7 @@ export default function CheckUsagePage() {
                   icon={StatIcons.tokens}
                   label="Total Tokens"
                   value={((result.totalTokens?.prompt || 0) + (result.totalTokens?.completion || 0)).toLocaleString()}
-                  sub={`In: ${(result.totalTokens?.prompt || 0).toLocaleString()} | Out: ${(result.totalTokens?.completion || 0).toLocaleString()}`}
+                  sub={`In: ${compactNum(result.totalTokens?.prompt)} | Out: ${compactNum(result.totalTokens?.completion)}`}
                   bg="hsl(var(--brutal-blue) / 0.55)"
                   plate="hsl(var(--brutal-blue))"
                 />
@@ -366,11 +374,11 @@ export default function CheckUsagePage() {
                   icon={StatIcons.cached}
                   label="Cached Tokens"
                   value={(result.totalTokens?.cachedRead || 0).toLocaleString()}
-                  sub={`Read: ${(result.totalTokens?.cachedRead || 0).toLocaleString()} | Write: ${(result.totalTokens?.cachedWrite || 0).toLocaleString()}`}
+                  sub={`Read: ${compactNum(result.totalTokens?.cachedRead)} | Write: ${compactNum(result.totalTokens?.cachedWrite)}`}
                   bg="hsl(var(--brutal-green) / 0.55)"
                   plate="hsl(var(--brutal-green))"
                 />
-                <div className="col-span-1 sm:col-span-3">
+                <div className="col-span-1 sm:col-span-2">
                   <StatCard
                     icon={StatIcons.cost}
                     label="Est. Cost"

@@ -27,6 +27,15 @@ export function applyAssistantPrefillPolicy(body, rawHeaders = null) {
   const trailingAssistant = body.messages.at(-1);
   if (trailingAssistant?.role !== ROLE.ASSISTANT) return body;
 
+  // A trailing assistant turn holding only server_tool_use blocks is a legit
+  // mid-execution state (tools pending, Anthropic continues on the next turn) —
+  // leave it alone instead of popping it or padding it with continuation text.
+  // Upstream #3567/#3714 tests require a well-formed server_tool_use block to
+  // survive normalization untouched.
+  const hasServerToolUse = Array.isArray(trailingAssistant.content) &&
+    trailingAssistant.content.some(block => block?.type === CLAUDE_BLOCK.SERVER_TOOL_USE);
+  if (hasServerToolUse) return body;
+
   const toolUses = Array.isArray(trailingAssistant.content)
     ? trailingAssistant.content.filter(block => block?.type === CLAUDE_BLOCK.TOOL_USE && block.id)
     : [];

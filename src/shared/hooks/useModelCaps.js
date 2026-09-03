@@ -106,9 +106,16 @@ export function useModelCaps() {
       loadModelCaps().then((maps) => { if (alive) apply(maps); });
     };
     window.addEventListener(CAPS_CHANGED_EVENT, onChanged);
+    // Custom models change at runtime — drop the shared cache and refetch
+    const invalidate = () => {
+      cache = null;
+      loadModelCaps().then((maps) => { if (alive) apply(maps); });
+    };
+    window.addEventListener("customModelChanged", invalidate);
     return () => {
       alive = false;
       window.removeEventListener(CAPS_CHANGED_EVENT, onChanged);
+      window.removeEventListener("customModelChanged", invalidate);
     };
   }, []);
 

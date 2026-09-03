@@ -553,14 +553,16 @@ export function parseQuotaData(provider, data) {
       case "ocg":
       case "commandcode":
       case "cmc":
+      case "groq":
+        // Requests/Tokens rate-limit windows from response headers — absolute
+        // used/total (calculatePercentage derives the bar), like Codex/Kiro.
         if (data.quotas) {
           Object.entries(data.quotas).forEach(([name, quota]) => {
             normalizedQuotas.push({
               name,
               used: quota.used || 0,
-              total: quota.total || 100,
+              total: quota.total || 0,
               resetAt: quota.resetAt || null,
-              remainingPercentage: quota.remainingPercentage,
             });
           });
         }

@@ -146,6 +146,8 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  overflow: visible;
 }
 
 .brutal-scope .b-stat-value {
@@ -155,16 +157,18 @@
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   color: hsl(var(--foreground));
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: visible;
 }
 
 .brutal-scope .b-stat-sub {
   font-size: 0.7rem;
   font-weight: 600;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: hsl(var(--muted-foreground));
+  color: hsl(0 0% 28%);
   line-height: 1.4;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: visible;
 }
 
 .brutal-scope .b-alert {
