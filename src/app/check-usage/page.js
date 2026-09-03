@@ -65,13 +65,69 @@ function Chip({ text }) {
   );
 }
 
+/* ---- Stat card icons (stroke matches brutal.css line weight) ---- */
+const iconProps = {
+  width: 18,
+  height: 18,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "#000",
+  strokeWidth: 2.5,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+};
+
+const StatIcons = {
+  requests: (
+    <svg {...iconProps}>
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  ),
+  tokens: (
+    <svg {...iconProps}>
+      <path d="M12 2c-4.42 0-8 1.34-8 3v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5c0-1.66-3.58-3-8-3z" />
+      <path d="M4 5c0 1.66 3.58 3 8 3s8-1.34 8-3" />
+      <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3" />
+    </svg>
+  ),
+  cached: (
+    <svg {...iconProps}>
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 3v6h-6" />
+      <path d="M12 7v5l3 3" />
+    </svg>
+  ),
+  cost: (
+    <svg {...iconProps}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M15 8.5c-.6-1-1.7-1.5-3-1.5-1.8 0-3 .9-3 2.25C9 12.5 15 11 15 14.25 15 15.6 13.8 16.5 12 16.5c-1.3 0-2.4-.5-3-1.5" />
+      <path d="M12 5.5v2" />
+      <path d="M12 16.5v2" />
+    </svg>
+  ),
+};
+
+function StatCard({ icon, label, value, sub, bg, plate }) {
+  return (
+    <div className="b-card shadow-brutal hover-lift p-3 flex items-start gap-3" style={{ background: bg }}>
+      <div className="b-icon-plate" style={{ background: plate }} aria-hidden="true">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="b-stat-label">{label}</p>
+        <p className="b-stat-value">{value}</p>
+        {sub && <p className="b-stat-sub">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
 export default function CheckUsagePage() {
   const [key, setKey] = useState("");
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [howToTab, setHowToTab] = useState("curl");
   const [barWidth, setBarWidth] = useState(0);
 
   const COOKIE_NAME = "qsk";
@@ -289,25 +345,39 @@ export default function CheckUsagePage() {
               </div>
 
               {/* Stat grid */}
-              <div className="grid grid-cols-3 gap-3 text-sm">
-                <div className="b-card shadow-brutal hover-lift p-3" style={{ background: "hsl(var(--brutal-yellow) / 0.55)" }}>
-                  <p style={{ color: "hsl(var(--muted-foreground))" }}>Total Requests</p>
-                  <p className="text-xl font-bold">{(result.totalRequests ?? 0).toLocaleString()}</p>
-                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>In current {result.limitPeriod} window</p>
-                </div>
-                <div className="b-card shadow-brutal hover-lift p-3" style={{ background: "hsl(var(--brutal-blue) / 0.55)" }}>
-                  <p style={{ color: "hsl(var(--muted-foreground))" }}>Total Tokens</p>
-                  <p className="text-xl font-bold">{((result.totalTokens?.prompt || 0) + (result.totalTokens?.completion || 0)).toLocaleString()}</p>
-                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>In: {result.totalTokens?.prompt?.toLocaleString()} | Out: {result.totalTokens?.completion?.toLocaleString()}</p>
-                </div>
-                <div className="b-card shadow-brutal hover-lift p-3" style={{ background: "hsl(var(--brutal-green) / 0.55)" }}>
-                  <p style={{ color: "hsl(var(--muted-foreground))" }}>Cached Tokens</p>
-                  <p className="text-xl font-bold">{result.totalTokens?.cachedRead?.toLocaleString() || 0}</p>
-                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Read: {result.totalTokens?.cachedRead?.toLocaleString()} | Write: {result.totalTokens?.cachedWrite?.toLocaleString()}</p>
-                </div>
-                <div className="b-card shadow-brutal hover-lift p-3 col-span-3" style={{ background: "hsl(var(--brutal-purple) / 0.55)" }}>
-                  <p style={{ color: "hsl(var(--muted-foreground))" }}>Est. Cost</p>
-                  <p className="text-xl font-bold">${result.totalTokens?.cost?.toFixed(4) || "0.00"}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                <StatCard
+                  icon={StatIcons.requests}
+                  label="Total Requests"
+                  value={(result.totalRequests ?? 0).toLocaleString()}
+                  sub={`In current ${result.limitPeriod} window`}
+                  bg="hsl(var(--brutal-yellow) / 0.55)"
+                  plate="hsl(var(--brutal-yellow))"
+                />
+                <StatCard
+                  icon={StatIcons.tokens}
+                  label="Total Tokens"
+                  value={((result.totalTokens?.prompt || 0) + (result.totalTokens?.completion || 0)).toLocaleString()}
+                  sub={`In: ${(result.totalTokens?.prompt || 0).toLocaleString()} | Out: ${(result.totalTokens?.completion || 0).toLocaleString()}`}
+                  bg="hsl(var(--brutal-blue) / 0.55)"
+                  plate="hsl(var(--brutal-blue))"
+                />
+                <StatCard
+                  icon={StatIcons.cached}
+                  label="Cached Tokens"
+                  value={(result.totalTokens?.cachedRead || 0).toLocaleString()}
+                  sub={`Read: ${(result.totalTokens?.cachedRead || 0).toLocaleString()} | Write: ${(result.totalTokens?.cachedWrite || 0).toLocaleString()}`}
+                  bg="hsl(var(--brutal-green) / 0.55)"
+                  plate="hsl(var(--brutal-green))"
+                />
+                <div className="col-span-1 sm:col-span-3">
+                  <StatCard
+                    icon={StatIcons.cost}
+                    label="Est. Cost"
+                    value={`$${(result.totalTokens?.cost ?? 0).toFixed(4)}`}
+                    bg="hsl(var(--brutal-purple) / 0.55)"
+                    plate="hsl(var(--brutal-purple))"
+                  />
                 </div>
               </div>
 
@@ -346,68 +416,6 @@ export default function CheckUsagePage() {
                 </div>
               )}
 
-              {/* How to use — tabbed */}
-              {baseUrl && (
-                <div>
-                  <h3 className="text-sm font-bold mb-2">How to Use</h3>
-                  <div className="flex gap-2 mb-3">
-                    {[
-                      { id: "curl", label: "cURL" },
-                      { id: "js", label: "JavaScript" },
-                      { id: "models", label: "Models" },
-                    ].map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setHowToTab(tab.id)}
-                        className={`b-tab ${howToTab === tab.id ? "b-tab-active" : ""}`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {howToTab === "curl" && (
-                    <pre className="b-pre">
-{`curl ${baseUrl}/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${result.keyPrefix}" \\
-  -d '{
-    "model": "${result.allowedModels?.[0]?.alias || "grok/grok-4.5"}",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'`}
-                    </pre>
-                  )}
-
-                  {howToTab === "js" && (
-                    <pre className="b-pre">
-{`const res = await fetch("${baseUrl}/v1/chat/completions", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer ${result.keyPrefix}"
-  },
-  body: JSON.stringify({
-    model: "${result.allowedModels?.[0]?.alias || "grok/grok-4.5"}",
-    messages: [{ role: "user", content: "Hello!" }]
-  })
-});
-const data = await res.json();`}
-                    </pre>
-                  )}
-
-                  {howToTab === "models" && (
-                    <pre className="b-pre">
-{`curl ${baseUrl}/v1/models \\
-  -H "Authorization: Bearer ${result.keyPrefix}"`}
-                    </pre>
-                  )}
-
-                  <p className="text-xs mt-3" style={{ color: "hsl(var(--muted-foreground))" }}>
-                    Use <span className="font-mono">{result.keyPrefix}</span> as your API key. Access models you are
-                    allowed to use under their alias names shown above.
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Actions */}

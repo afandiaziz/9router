@@ -126,22 +126,45 @@
 .brutal-scope .b-badge-ok  { background-color: hsl(var(--brutal-green)); color: #05230f; }
 .brutal-scope .b-badge-bad { background-color: hsl(0 84% 60%); color: #fff; }
 
-.brutal-scope .b-tab {
-  padding: 0.4rem 0.85rem; font-size: 0.75rem; font-weight: 700;
-  border: 2px solid hsl(var(--border)); border-radius: var(--radius);
-  background-color: hsl(var(--card)); color: hsl(var(--muted-foreground));
+/* ---- Stat cards ---- */
+.brutal-scope .b-icon-plate {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  border: 2px solid hsl(var(--border));
+  border-radius: var(--radius);
   box-shadow: 2px 2px 0 0 rgb(0, 0, 0);
-  transition: transform 0.12s ease;
+  transform: rotate(-4deg);
+  color: #000;
 }
-.brutal-scope .b-tab:hover { transform: translateY(-0.1rem); }
-.brutal-scope .b-tab-active { background-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
 
-.brutal-scope .b-pre {
-  border: 2px solid hsl(var(--border)); border-radius: var(--radius);
-  background-color: #faf6ec; color: hsl(var(--foreground));
-  box-shadow: 2px 2px 0 0 rgb(0, 0, 0);
-  padding: 0.75rem; font-size: 0.75rem; overflow-x: auto;
+.brutal-scope .b-stat-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(var(--muted-foreground));
+}
+
+.brutal-scope .b-stat-value {
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--foreground));
+  overflow-wrap: anywhere;
+}
+
+.brutal-scope .b-stat-sub {
+  font-size: 0.7rem;
+  font-weight: 600;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .brutal-scope .b-alert {
