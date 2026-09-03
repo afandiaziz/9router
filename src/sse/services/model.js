@@ -32,13 +32,34 @@ export async function resolveModelAlias(alias) {
   return resolveModelAliasFromMap(alias, aliases);
 }
 
+async function isRealProviderPrefix(prefix) {
+  if (RESERVED_PROVIDER_PREFIXES.has(prefix)) return true;
+  try {
+    const nodes = await getProviderNodes();
+    return nodes.some((node) => node.prefix === prefix);
+  } catch {
+    return false;
+  }
+}
+
 export async function resolveComboRoute(modelStr) {
   const aliases = await getModelAliases();
   const aliasTarget = typeof aliases?.[modelStr] === "string" ? aliases[modelStr] : null;
   const target = aliasTarget || modelStr;
   const candidates = [target];
   if (aliasTarget?.startsWith("combo/")) candidates.push(aliasTarget.slice("combo/".length));
-  else if (!aliasTarget && target.includes("/")) candidates.push(target.slice(target.lastIndexOf("/") + 1));
+  else if (!aliasTarget && target.includes("/")) {
+    // Guard (upstream parity): a plain `provider/model` string must not be
+    // hijacked into a combo just because its tail collides with a combo name
+    // (e.g. `clinepass/deepseek-v4-flash` vs combo `deepseek-v4-flash`).
+    // Upstream's getComboModels bailed out on any "/"; we keep the basename
+    // fallback only for prefixes that are NOT real providers, so
+    // provider-prefixed combo names (openrouter/lordx.1) still resolve.
+    const prefix = target.slice(0, target.lastIndexOf("/"));
+    if (!(await isRealProviderPrefix(prefix))) {
+      candidates.push(target.slice(target.lastIndexOf("/") + 1));
+    }
+  }
 
   for (const name of candidates) {
     const combo = await getComboByName(name);
