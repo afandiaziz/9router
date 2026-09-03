@@ -117,15 +117,17 @@ const StatIcons = {
 
 function StatCard({ icon, label, value, sub, bg, plate }) {
   return (
-    <div className="b-card shadow-brutal hover-lift p-3 flex items-start gap-3" style={{ background: bg }}>
-      <div className="b-icon-plate" style={{ background: plate }} aria-hidden="true">
-        {icon}
+    <div className="b-card shadow-brutal hover-lift p-3" style={{ background: bg }}>
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="b-icon-plate" style={{ background: plate }} aria-hidden="true">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <p className="b-stat-label">{label}</p>
+          <p className="b-stat-value">{value}</p>
+        </div>
       </div>
-      <div className="min-w-0">
-        <p className="b-stat-label">{label}</p>
-        <p className="b-stat-value">{value}</p>
-        {sub && <p className="b-stat-sub">{sub}</p>}
-      </div>
+      {sub && <p className="b-stat-sub">{sub}</p>}
     </div>
   );
 }
@@ -250,7 +252,7 @@ export default function CheckUsagePage() {
 
   return (
     <div className="brutal-scope bg-dots flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-2xl py-10">
+      <div className="w-full max-w-3xl py-10">
         {/* Hero */}
         <div className="flex flex-col items-center mb-8">
           <div className="animate-float b-card shadow-brutal mb-4 p-3">
@@ -353,7 +355,7 @@ export default function CheckUsagePage() {
               </div>
 
               {/* Stat grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                 <StatCard
                   icon={StatIcons.requests}
                   label="Total Requests"
@@ -378,7 +380,7 @@ export default function CheckUsagePage() {
                   bg="hsl(var(--brutal-green) / 0.55)"
                   plate="hsl(var(--brutal-green))"
                 />
-                <div className="col-span-1 sm:col-span-2">
+                <div className="col-span-1 sm:col-span-3">
                   <StatCard
                     icon={StatIcons.cost}
                     label="Est. Cost"

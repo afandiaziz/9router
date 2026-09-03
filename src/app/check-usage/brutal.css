@@ -162,6 +162,7 @@
 }
 
 .brutal-scope .b-stat-sub {
+  margin-top: 0.35rem;
   font-size: 0.7rem;
   font-weight: 600;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
