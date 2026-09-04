@@ -37,14 +37,16 @@ export async function buildUsageReport(apiKeyRow, progress, db, options = {}) {
 
     const tokens = parseJson(r.tokens, {});
     const cached = parseCachedTokens(tokens);
+    const modelCached = (Number(cached.cachedRead) || 0) + (Number(cached.cachedWrite) || 0);
     cachedRead += cached.cachedRead;
     cachedWrite += cached.cachedWrite;
 
     const model = r.model || "unknown";
     if (!perModelMap[model]) {
-      perModelMap[model] = { model, tokens: 0 };
+      perModelMap[model] = { model, tokens: 0, cachedTokens: 0 };
     }
     perModelMap[model].tokens += (Number(r.promptTokens) || 0) + (Number(r.completionTokens) || 0);
+    perModelMap[model].cachedTokens += modelCached;
   }
 
   // Resolve aliases for per-model display.
@@ -73,15 +75,22 @@ export async function buildUsageReport(apiKeyRow, progress, db, options = {}) {
     allowedModel === logged ||
     allowedModel.endsWith(`/${logged}`) ||
     logged.endsWith(`/${allowedModel}`);
-  const perModel = Object.values(perModelMap).map((m) => {
-    const entry =
-      allowedModels.find((e) => e.model === m.model) ||
-      allowedModels.find((e) => suffixMatch(e.model, m.model));
-    return {
-      model: entry?.alias || m.model,
-      tokens: m.tokens,
-    };
-  });
+  const perModel = Object.values(perModelMap)
+    .map((m) => {
+      const entry =
+        allowedModels.find((e) => e.model === m.model) ||
+        allowedModels.find((e) => suffixMatch(e.model, m.model));
+      const tokens = m.tokens;
+      const cachedTokens = m.cachedTokens;
+      const totalWithCached = tokens + cachedTokens;
+      return {
+        model: entry?.alias || m.model,
+        tokens,
+        cachedTokens,
+        totalWithCached,
+      };
+    })
+    .sort((a, b) => b.totalWithCached - a.totalWithCached);
 
   return {
     name: apiKeyRow.name,
