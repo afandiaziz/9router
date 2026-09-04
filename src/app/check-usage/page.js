@@ -88,21 +88,22 @@ const iconProps = {
 const StatIcons = {
   requests: (
     <svg {...iconProps}>
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+      <line x1="4" y1="9" x2="20" y2="9" />
+      <line x1="4" y1="15" x2="20" y2="15" />
+      <line x1="10" y1="3" x2="8" y2="21" />
+      <line x1="16" y1="3" x2="14" y2="21" />
     </svg>
   ),
   tokens: (
     <svg {...iconProps}>
-      <path d="M12 2c-4.42 0-8 1.34-8 3v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5c0-1.66-3.58-3-8-3z" />
-      <path d="M4 5c0 1.66 3.58 3 8 3s8-1.34 8-3" />
-      <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3" />
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
     </svg>
   ),
   cached: (
     <svg {...iconProps}>
-      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-      <path d="M21 3v6h-6" />
-      <path d="M12 7v5l3 3" />
+      <path d="M12 2c-4.42 0-8 1.34-8 3v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5c0-1.66-3.58-3-8-3z" />
+      <path d="M4 5c0 1.66 3.58 3 8 3s8-1.34 8-3" />
+      <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3" />
     </svg>
   ),
   cost: (
