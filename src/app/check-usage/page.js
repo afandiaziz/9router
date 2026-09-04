@@ -427,7 +427,7 @@ export default function CheckUsagePage() {
 
   return (
     <div className="brutal-scope bg-dots flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-3xl py-10">
+      <div className="w-full max-w-5xl py-10">
         {/* Hero */}
         <div className="flex flex-col items-center mb-8">
           <div className="animate-float b-card shadow-brutal mb-4 p-3">
@@ -448,7 +448,7 @@ export default function CheckUsagePage() {
         </div>
 
         {!result ? (
-          <form onSubmit={handleSubmit} className="b-card shadow-brutal p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="b-card shadow-brutal p-6 space-y-4 max-w-xl mx-auto">
             <div className="relative">
               <svg
                 width="18"
@@ -479,134 +479,9 @@ export default function CheckUsagePage() {
             {error && <p className="b-alert">{error}</p>}
           </form>
         ) : (
-          <div className="space-y-6 animate-reveal-up">
-            <div className="b-card shadow-brutal p-6 space-y-5">
-              {/* Header */}
-              <div className="flex justify-between items-center gap-3">
-                <div className="min-w-0">
-                  <span className="font-bold text-lg" style={{ color: "hsl(var(--primary))" }}>
-                    {result.name}
-                  </span>
-                  <span className="ml-2 font-mono text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
-                    {result.keyPrefix}
-                  </span>
-                </div>
-                <span className={`b-badge ${result.isActive ? "b-badge-ok" : "b-badge-bad"}`}>
-                  {result.isActive ? "Active" : "Disabled"}
-                </span>
-              </div>
-
-              {/* Base URL */}
-              {baseUrl && (
-                <div className="b-card shadow-brutal-sm p-3 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-xs mb-1" style={{ color: "hsl(var(--muted-foreground))" }}>Base URL</p>
-                    <p className="text-sm font-mono truncate">{baseUrl}/v1</p>
-                  </div>
-                  <CopyButton text={`${baseUrl}/v1`} label="Base URL" />
-                </div>
-              )}
-
-              {/* Token usage bar */}
-              <div>
-                <div className="flex justify-between text-sm mb-1 font-bold">
-                  <span>Token Usage ({result.limitPeriod})</span>
-                  <span>{result.percent != null ? `${result.percent}%` : "Unlimited"}</span>
-                </div>
-                <div className="b-progress-track">
-                  <div
-                    className="b-progress-fill"
-                    style={{ width: `${barWidth}%`, background: barColor, borderRight: barWidth ? "2px solid #000" : "none" }}
-                  />
-                </div>
-                <p className="text-sm mt-1 font-medium" style={{ color: "hsl(var(--foreground))" }}>
-                  {result.tokensUsed?.toLocaleString()} / {result.limit?.toLocaleString() || "∞"} tokens
-                </p>
-                {result.resetsAt && (
-                  <p className="text-xs mt-0.5" style={{ color: "hsl(var(--foreground))" }}>
-                    Resets: {new Date(result.resetsAt).toLocaleString()}
-                  </p>
-                )}
-              </div>
-
-              {/* Stat grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                <StatCard
-                  icon={StatIcons.requests}
-                  label="Total Requests"
-                  value={(result.totalRequests ?? 0).toLocaleString()}
-                  sub={`In current ${result.limitPeriod} window`}
-                  bg="hsl(var(--brutal-yellow) / 0.55)"
-                  plate="hsl(var(--brutal-yellow))"
-                />
-                <StatCard
-                  icon={StatIcons.tokens}
-                  label="Total Tokens"
-                  value={((result.totalTokens?.prompt || 0) + (result.totalTokens?.completion || 0)).toLocaleString()}
-                  sub={`In: ${compactNum(result.totalTokens?.prompt)} | Out: ${compactNum(result.totalTokens?.completion)}`}
-                  bg="hsl(var(--brutal-blue) / 0.55)"
-                  plate="hsl(var(--brutal-blue))"
-                />
-                <StatCard
-                  icon={StatIcons.cached}
-                  label="Cached Tokens"
-                  value={(result.totalTokens?.cachedRead || 0).toLocaleString()}
-                  sub={`Read: ${compactNum(result.totalTokens?.cachedRead)} | Write: ${compactNum(result.totalTokens?.cachedWrite)}`}
-                  bg="hsl(var(--brutal-green) / 0.55)"
-                  plate="hsl(var(--brutal-green))"
-                />
-                <div className="col-span-1 sm:col-span-3">
-                  <StatCard
-                    icon={StatIcons.cost}
-                    label="Est. Cost"
-                    value={`$${(result.totalTokens?.cost ?? 0).toFixed(4)}`}
-                    bg="hsl(var(--brutal-purple) / 0.55)"
-                    plate="hsl(var(--brutal-purple))"
-                  />
-                </div>
-              </div>
-
-              {/* Usage by Model */}
-              {result.perModel?.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-bold mb-2">Usage by Model</h3>
-                  <div className="space-y-2">
-                    {result.perModel.map((m, i) => (
-                      <div key={i} className="flex justify-between items-center b-card shadow-brutal-sm p-2">
-                        <div>
-                          <span className="font-mono text-sm">{m.alias || m.model}</span>
-                        </div>
-                        <span className="font-mono text-sm">{m.tokens.toLocaleString()} tokens</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Allowed Models */}
-              {result.allowedModels?.length > 0 ? (
-                <div>
-                  <h3 className="text-sm font-bold mb-2">Allowed Models</h3>
-                  <p className="text-xs mb-3" style={{ color: "hsl(var(--muted-foreground))" }}>
-                    Click a model name or Copy button to copy.
-                  </p>
-                  <div className="space-y-2.5">
-                    {result.allowedModels.map((m, i) => (
-                      <ModelCard key={i} modelItem={m} />
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <h3 className="text-sm font-bold mb-1">Allowed Models</h3>
-                  <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>All models allowed</p>
-                </div>
-              )}
-
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3">
+          <div className="space-y-4 animate-reveal-up">
+            {/* Actions - Full width at the top */}
+            <div className="flex gap-3 w-full">
               <button onClick={handleRefresh} disabled={refreshing} className="b-btn flex-1">
                 <svg
                   width="16"
@@ -633,6 +508,196 @@ export default function CheckUsagePage() {
               >
                 Check Another Key
               </button>
+            </div>
+
+            {/* Single Outer Card with 2-Column Responsive Grid */}
+            <div className="b-card shadow-brutal p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                {/* Column 1 (Left) */}
+                <div className="space-y-5">
+                  {/* Header */}
+                  <div className="flex justify-between items-center gap-3">
+                    <div className="min-w-0">
+                      <span className="font-bold text-lg" style={{ color: "hsl(var(--primary))" }}>
+                        {result.name}
+                      </span>
+                      <span className="ml-2 font-mono text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                        {result.keyPrefix}
+                      </span>
+                    </div>
+                    <span className={`b-badge ${result.isActive ? "b-badge-ok" : "b-badge-bad"}`}>
+                      {result.isActive ? "Active" : "Disabled"}
+                    </span>
+                  </div>
+
+                  {/* Base URL */}
+                  {baseUrl && (
+                    <div className="b-card shadow-brutal-sm p-3 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs mb-1" style={{ color: "hsl(var(--muted-foreground))" }}>Base URL</p>
+                        <p className="text-sm font-mono truncate">{baseUrl}/v1</p>
+                      </div>
+                      <CopyButton text={`${baseUrl}/v1`} label="Base URL" />
+                    </div>
+                  )}
+
+                  {/* Token usage bar */}
+                  <div>
+                    <div className="flex justify-between text-sm mb-1 font-bold">
+                      <span>Token Usage ({result.limitPeriod})</span>
+                      <span>{result.percent != null ? `${result.percent}%` : "Unlimited"}</span>
+                    </div>
+                    <div className="b-progress-track">
+                      <div
+                        className="b-progress-fill"
+                        style={{ width: `${barWidth}%`, background: barColor, borderRight: barWidth ? "2px solid #000" : "none" }}
+                      />
+                    </div>
+                    <p className="text-sm mt-1 font-medium" style={{ color: "hsl(var(--foreground))" }}>
+                      {result.tokensUsed?.toLocaleString()} / {result.limit?.toLocaleString() || "∞"} tokens
+                    </p>
+                    {result.resetsAt && (
+                      <p className="text-xs mt-0.5" style={{ color: "hsl(var(--foreground))" }}>
+                        Resets: {new Date(result.resetsAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Stat Cards - Mobile only (shown directly under Token Usage on mobile) */}
+                  <div className="block lg:hidden space-y-2">
+                    <h3 className="text-sm font-bold">Detail Usage Quota Tokens</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <StatCard
+                        icon={StatIcons.requests}
+                        label="Total Requests"
+                        value={(result.totalRequests ?? 0).toLocaleString()}
+                        sub={`In current ${result.limitPeriod} window`}
+                        bg="hsl(var(--brutal-yellow) / 0.55)"
+                        plate="hsl(var(--brutal-yellow))"
+                      />
+                      <StatCard
+                        icon={StatIcons.tokens}
+                        label="Total Tokens"
+                        value={((result.totalTokens?.prompt || 0) + (result.totalTokens?.completion || 0)).toLocaleString()}
+                        sub={`In: ${compactNum(result.totalTokens?.prompt)} | Out: ${compactNum(result.totalTokens?.completion)}`}
+                        bg="hsl(var(--brutal-blue) / 0.55)"
+                        plate="hsl(var(--brutal-blue))"
+                      />
+                      <StatCard
+                        icon={StatIcons.cached}
+                        label="Cached Tokens"
+                        value={(result.totalTokens?.cachedRead || 0).toLocaleString()}
+                        sub={`Read: ${compactNum(result.totalTokens?.cachedRead)} | Write: ${compactNum(result.totalTokens?.cachedWrite)}`}
+                        bg="hsl(var(--brutal-green) / 0.55)"
+                        plate="hsl(var(--brutal-green))"
+                      />
+                      <StatCard
+                        icon={StatIcons.cost}
+                        label="Est. Cost"
+                        value={`$${(result.totalTokens?.cost ?? 0).toFixed(4)}`}
+                        sub="Estimated token cost"
+                        bg="hsl(var(--brutal-purple) / 0.55)"
+                        plate="hsl(var(--brutal-purple))"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Allowed Models (directly under Token Usage on desktop) */}
+                  {result.allowedModels?.length > 0 ? (
+                    <div>
+                      <h3 className="text-sm font-bold mb-2">Allowed Models</h3>
+                      <p className="text-xs mb-3" style={{ color: "hsl(var(--muted-foreground))" }}>
+                        Click a model name or Copy button to copy.
+                      </p>
+                      <div className="space-y-2.5">
+                        {result.allowedModels.map((m, i) => (
+                          <ModelCard key={i} modelItem={m} />
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <h3 className="text-sm font-bold mb-1">Allowed Models</h3>
+                      <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                        All models allowed
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Column 2 (Right) */}
+                <div className="space-y-5">
+                  {/* Stat Cards - Desktop only (top of right column) */}
+                  <div className="hidden lg:block space-y-2">
+                    <h3 className="text-sm font-bold">Detail Usage Quota Tokens</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <StatCard
+                        icon={StatIcons.requests}
+                        label="Total Requests"
+                        value={(result.totalRequests ?? 0).toLocaleString()}
+                        sub={`In current ${result.limitPeriod} window`}
+                        bg="hsl(var(--brutal-yellow) / 0.55)"
+                        plate="hsl(var(--brutal-yellow))"
+                      />
+                      <StatCard
+                        icon={StatIcons.tokens}
+                        label="Total Tokens"
+                        value={((result.totalTokens?.prompt || 0) + (result.totalTokens?.completion || 0)).toLocaleString()}
+                        sub={`In: ${compactNum(result.totalTokens?.prompt)} | Out: ${compactNum(result.totalTokens?.completion)}`}
+                        bg="hsl(var(--brutal-blue) / 0.55)"
+                        plate="hsl(var(--brutal-blue))"
+                      />
+                      <StatCard
+                        icon={StatIcons.cached}
+                        label="Cached Tokens"
+                        value={(result.totalTokens?.cachedRead || 0).toLocaleString()}
+                        sub={`Read: ${compactNum(result.totalTokens?.cachedRead)} | Write: ${compactNum(result.totalTokens?.cachedWrite)}`}
+                        bg="hsl(var(--brutal-green) / 0.55)"
+                        plate="hsl(var(--brutal-green))"
+                      />
+                      <StatCard
+                        icon={StatIcons.cost}
+                        label="Est. Cost"
+                        value={`$${(result.totalTokens?.cost ?? 0).toFixed(4)}`}
+                        sub="Estimated token cost"
+                        bg="hsl(var(--brutal-purple) / 0.55)"
+                        plate="hsl(var(--brutal-purple))"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Usage by Model - sorted descending by (tokens + cached), scrollable max 5 */}
+                  {result.perModel?.length > 0 && (
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-sm font-bold">Usage by Model</h3>
+                        <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                          Sorted by total tokens + cached
+                        </span>
+                      </div>
+                      <div className="b-model-usage-list space-y-2">
+                        {result.perModel.map((m, i) => (
+                          <div key={i} className="b-model-usage-item">
+                            <div className="min-w-0 pr-2">
+                              <span className="font-mono text-sm font-bold block truncate" title={m.model}>
+                                {m.model}
+                              </span>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="font-mono text-sm font-bold block">
+                                {(m.totalWithCached ?? m.tokens).toLocaleString()} total
+                              </span>
+                              <span className="font-mono text-xs block" style={{ color: "hsl(var(--muted-foreground))" }}>
+                                Tokens: {m.tokens?.toLocaleString() || 0} · Cached: {m.cachedTokens?.toLocaleString() || 0}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}
