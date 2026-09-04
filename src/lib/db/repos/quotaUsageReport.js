@@ -13,8 +13,9 @@ export function parseCachedTokens(tokens) {
   return { cachedRead: Number(read) || 0, cachedWrite: Number(write) || 0 };
 }
 
-export async function buildUsageReport(apiKeyRow, progress, db) {
+export async function buildUsageReport(apiKeyRow, progress, db, options = {}) {
   const { periodKey, windowStart, resetAt } = getWindowKey(apiKeyRow.limitPeriod);
+  const resolveCaps = typeof options?.resolveCaps === "function" ? options.resolveCaps : null;
 
   // Query usageHistory for this key within current window.
   // A null resetAt means "no upper bound" (lifetime) — comparing against NULL in SQL
@@ -54,14 +55,20 @@ export async function buildUsageReport(apiKeyRow, progress, db) {
   // The "/" boundary keeps this precise: "grok-4.5" won't match "grok-4.5-high",
   // and a bare "4.5" won't match "grok-4.5".
   const allowedModels = progress.allowedModels || [];
-	// Strip the "model" key from each allowedModels entry for the report payload,
-	// without mutating the source progress.allowedModels (still needed above for
-	// suffix matching).
-	const allowedModelsForReport = allowedModels.map((e) => {
-		return {
-			model: e?.alias || e.model,
-		};
-	});
+  const allowedModelsForReport = await Promise.all(
+    allowedModels.map(async (e) => {
+      const rawModel = typeof e === "string" ? e : (e?.model || "");
+      const display = typeof e === "string" ? e : (e?.alias || e?.model || "");
+      const resolved = resolveCaps
+        ? await resolveCaps(rawModel, typeof e === "object" ? e?.alias : null)
+        : null;
+      return {
+        model: display,
+        rawModel,
+        caps: resolved || {},
+      };
+    })
+  );
   const suffixMatch = (allowedModel, logged) =>
     allowedModel === logged ||
     allowedModel.endsWith(`/${logged}`) ||
