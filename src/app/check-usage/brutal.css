@@ -349,6 +349,43 @@
 .brutal-scope .b-cap-videoInput  { background-color: hsl(185 80% 78%); }
 .brutal-scope .b-cap-audioOutput { background-color: hsl(340 85% 82%); }
 
+/* ---- Usage by Model Scrollable List ---- */
+.brutal-scope .b-model-usage-list {
+  max-height: 310px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: #000 hsl(var(--muted));
+}
+
+.brutal-scope .b-model-usage-list::-webkit-scrollbar {
+  width: 6px;
+}
+.brutal-scope .b-model-usage-list::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border: 1px solid #000;
+  border-radius: var(--radius);
+}
+.brutal-scope .b-model-usage-list::-webkit-scrollbar-thumb {
+  background: #000;
+  border-radius: var(--radius);
+}
+
+.brutal-scope .b-model-usage-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 2px solid hsl(var(--border));
+  background-color: hsl(var(--card));
+  border-radius: var(--radius);
+  box-shadow: 2px 2px 0 0 rgb(0, 0, 0);
+  padding: 0.55rem 0.75rem;
+  transition: transform 0.1s ease;
+}
+.brutal-scope .b-model-usage-item:hover {
+  transform: translateY(-0.05rem);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .brutal-scope .animate-float,
   .brutal-scope .animate-reveal-up,
