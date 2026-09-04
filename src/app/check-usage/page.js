@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./brutal.css";
 
 function CopyIcon({ copied }) {
@@ -128,6 +128,181 @@ function StatCard({ icon, label, value, sub, bg, plate }) {
         </div>
       </div>
       {sub && <p className="b-stat-sub">{sub}</p>}
+    </div>
+  );
+}
+
+const CAPABILITY_CONFIG = [
+  {
+    key: "vision",
+    label: "Vision (image input)",
+    className: "b-cap-vision",
+    icon: (
+      <svg viewBox="0 0 24 24">
+        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="2.5" />
+      </svg>
+    ),
+  },
+  {
+    key: "reasoning",
+    label: "Reasoning / thinking",
+    className: "b-cap-reasoning",
+    icon: (
+      <svg viewBox="0 0 24 24">
+        <path d="M9.5 4.5A3.5 3.5 0 0 0 6 8v.3A3.5 3.5 0 0 0 4.5 15H6a3.5 3.5 0 0 0 3.5 3.5V4.5Z" />
+        <path d="M14.5 4.5A3.5 3.5 0 0 1 18 8v.3a3.5 3.5 0 0 1 1.5 6.7H18a3.5 3.5 0 0 1-3.5 3.5V4.5Z" />
+        <path d="M9.5 9H7.5M14.5 9h2M9.5 14H7M14.5 14h2.5" />
+      </svg>
+    ),
+  },
+  {
+    key: "tools",
+    label: "Tool calling",
+    className: "b-cap-tools",
+    icon: (
+      <svg viewBox="0 0 24 24">
+        <path d="M14.7 6.3a4 4 0 0 0-5-5L12 3.6 9.6 6 7.3 3.7a4 4 0 0 0 5 5L4 17l3 3 8.3-8.3a4 4 0 0 0 5-5L18 9l-2.4-2.4 2.3-2.3a4 4 0 0 0-3.2 2Z" />
+      </svg>
+    ),
+  },
+  {
+    key: "pdf",
+    label: "PDF input",
+    className: "b-cap-pdf",
+    icon: (
+      <svg viewBox="0 0 24 24">
+        <path d="M6 2h8l4 4v16H6z" />
+        <path d="M14 2v5h5M8.5 15h7M8.5 18h5" />
+      </svg>
+    ),
+  },
+  {
+    key: "imageOutput",
+    label: "Image output",
+    className: "b-cap-imageOutput",
+    icon: (
+      <svg viewBox="0 0 24 24">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="9" cy="9" r="2" />
+        <path d="m21 15-5-5L5 21" />
+      </svg>
+    ),
+  },
+  {
+    key: "audioInput",
+    label: "Audio input",
+    className: "b-cap-audioInput",
+    icon: (
+      <svg viewBox="0 0 24 24">
+        <path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4" />
+      </svg>
+    ),
+  },
+  {
+    key: "videoInput",
+    label: "Video input",
+    className: "b-cap-videoInput",
+    icon: (
+      <svg viewBox="0 0 24 24">
+        <rect x="3" y="5" width="14" height="14" rx="2" />
+        <path d="m17 10 4-2v8l-4-2z" />
+      </svg>
+    ),
+  },
+  {
+    key: "audioOutput",
+    label: "Audio output",
+    className: "b-cap-audioOutput",
+    icon: (
+      <svg viewBox="0 0 24 24">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+      </svg>
+    ),
+  },
+];
+
+function ModelCard({ modelItem }) {
+  const modelText = typeof modelItem === "string" ? modelItem : (modelItem?.model || "");
+  const caps = typeof modelItem === "object" ? (modelItem?.caps || {}) : {};
+  const [copied, setCopied] = useState(false);
+  const nameRef = useRef(null);
+  const [fitSize, setFitSize] = useState(14);
+
+  const copy = async (e) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(modelText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+
+  useEffect(() => {
+    const el = nameRef.current;
+    if (!el) return;
+    const parent = el.parentElement;
+    if (!parent) return;
+
+    const measure = () => {
+      let current = 14;
+      el.style.setProperty("--fit-size", `${current}px`);
+      while (el.scrollWidth > parent.clientWidth && current > 11) {
+        current -= 0.5;
+        el.style.setProperty("--fit-size", `${current}px`);
+      }
+      setFitSize(current);
+    };
+
+    measure();
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(measure);
+      ro.observe(parent);
+      return () => ro.disconnect();
+    }
+  }, [modelText]);
+
+  const activeCaps = CAPABILITY_CONFIG.filter((c) => caps[c.key]);
+
+  return (
+    <div className="b-model-card">
+      <div className="b-model-head">
+        <div
+          className="b-model-name-wrapper"
+          onClick={copy}
+          title={`Click to copy: ${modelText}`}
+        >
+          <span
+            ref={nameRef}
+            className={`b-model-name ${copied ? "b-chip-pop" : ""}`}
+            style={{ "--fit-size": `${fitSize}px` }}
+          >
+            {modelText}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={copy}
+          className="b-copy-btn"
+          title={`Copy ${modelText}`}
+        >
+          {copied ? "✓ Copied" : "Copy"}
+          <CopyIcon copied={copied} />
+        </button>
+      </div>
+
+      {activeCaps.length > 0 && (
+        <div className="b-cap-list">
+          {activeCaps.map((c) => (
+            <span key={c.key} className={`b-cap-chip ${c.className}`}>
+              {c.icon}
+              {c.label}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -412,10 +587,12 @@ export default function CheckUsagePage() {
               {result.allowedModels?.length > 0 ? (
                 <div>
                   <h3 className="text-sm font-bold mb-2">Allowed Models</h3>
-                  <p className="text-xs mb-2" style={{ color: "hsl(var(--muted-foreground))" }}>Click a model to copy its name.</p>
-                  <div className="flex flex-wrap gap-2">
+                  <p className="text-xs mb-3" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    Click a model name or Copy button to copy.
+                  </p>
+                  <div className="space-y-2.5">
                     {result.allowedModels.map((m, i) => (
-                      <Chip key={i} text={m.alias || m.model} />
+                      <ModelCard key={i} modelItem={m} />
                     ))}
                   </div>
                 </div>
