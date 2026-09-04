@@ -54,6 +54,8 @@ docs/*
 !docs/FORK-DEVELOPMENT-HANDBOOK.md
 !docs/runbooks/
 !docs/runbooks/*
+!docs/superpowers/
+!docs/superpowers/**
 test/*
 open-sse/test/*
 RM.vn.md
