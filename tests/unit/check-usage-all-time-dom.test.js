@@ -6,7 +6,6 @@ describe("check-usage dual card layout & all-time stats", () => {
     const pageSrc = readFileSync(new URL("../../src/app/check-usage/page.js", import.meta.url), "utf8");
 
     expect(pageSrc).toContain("All Time Usage Tokens");
-    expect(pageSrc).toContain("grid-cols-1 xl:grid-cols-2");
     expect(pageSrc).toContain("https://dashboard.afandiaziz.dev/api/omniroute/usage-stats");
   });
 

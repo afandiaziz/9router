@@ -608,8 +608,8 @@ export default function CheckUsagePage() {
 												<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
 													<StatCard icon={StatIcons.requests} label="Total Requests" value={(result.totalRequests ?? 0).toLocaleString()} sub={`In current ${result.limitPeriod} window`} bg="hsl(var(--brutal-yellow) / 0.55)" plate="hsl(var(--brutal-yellow))" />
 													<StatCard icon={StatIcons.tokens} label="Total Tokens" value={((result.totalTokens?.prompt || 0) + (result.totalTokens?.completion || 0)).toLocaleString()} sub={`In: ${compactNum(result.totalTokens?.prompt)} | Out: ${compactNum(result.totalTokens?.completion)}`} bg="hsl(var(--brutal-blue) / 0.55)" plate="hsl(var(--brutal-blue))" />
-													<StatCard icon={StatIcons.cached} label="Cached Tokens" value={(result.totalTokens?.cachedRead || 0).toLocaleString()} sub={`Read: ${compactNum(result.totalTokens?.cachedRead)} | Write: ${compactNum(result.totalTokens?.cachedWrite)}`} bg="hsl(var(--brutal-green) / 0.55)" plate="hsl(var(--brutal-green))" />
-													<StatCard icon={StatIcons.cost} label="Est. Cost" value={`$${(result.totalTokens?.cost ?? 0).toFixed(4)}`} sub="Estimated token cost" bg="hsl(var(--brutal-purple) / 0.55)" plate="hsl(var(--brutal-purple))" />
+													<StatCard icon={StatIcons.cached} label="Cached Tokens" value={(result.totalTokens?.cachedRead || 0).toLocaleString()} sub={`Read: ${compactNum(result.totalTokens?.cachedRead)} | Write: ${compactNum(result.totalTokens?.cachedWrite)}`} bg="hsl(var(--brutal-purple) / 0.55)" plate="hsl(var(--brutal-purple))" />
+													<StatCard icon={StatIcons.cost} label="Est. Cost" value={`$${(result.totalTokens?.cost ?? 0).toFixed(4)}`} sub="Estimated token cost" bg="hsl(var(--brutal-green) / 0.55)" plate="hsl(var(--brutal-green))" />
 												</div>
 											</div>
 
@@ -690,11 +690,11 @@ export default function CheckUsagePage() {
 													<StatCard icon={StatIcons.tokens} label="Total Tokens" value={Number(totals.tokens || 0).toLocaleString()} sub="Lifetime processed tokens" bg="hsl(var(--brutal-blue) / 0.55)" plate="hsl(var(--brutal-blue))" />
 													<StatCard icon={StatIcons.input} label="Input Tokens" value={Number(totals.input || 0).toLocaleString()} sub="Prompt input tokens" bg="hsl(var(--brutal-ember) / 0.55)" plate="hsl(var(--brutal-ember))" />
 													<StatCard icon={StatIcons.output} label="Output Tokens" value={Number(totals.output || 0).toLocaleString()} sub="Completion output tokens" bg="hsl(var(--brutal-lime) / 0.55)" plate="hsl(var(--brutal-lime))" />
-													<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-														<StatCard icon={StatIcons.cached} label="Total Cached" value={Number(totals.cached || 0).toLocaleString()} sub="Total cached prompt tokens" bg="hsl(var(--brutal-purple) / 0.55)" plate="hsl(var(--brutal-purple))" />
-														<StatCard icon={StatIcons.cached} label="Cache Read" value={Number(totals.cacheRead || 0).toLocaleString()} sub="Cached prompt hits" bg="hsl(var(--brutal-ember) / 0.45)" plate="hsl(var(--brutal-ember))" />
-														<StatCard icon={StatIcons.cacheCreation} label="Cache Creation" value={Number(totals.cacheCreation || 0).toLocaleString()} sub="Cached write/creation" bg="hsl(var(--brutal-pink) / 0.55)" plate="hsl(var(--brutal-pink))" />
-													</div>
+												</div>
+												<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+													<StatCard icon={StatIcons.cached} label="Total Cached" value={Number(totals.cached || 0).toLocaleString()} sub="Total cached prompt tokens" bg="hsl(var(--brutal-purple) / 0.55)" plate="hsl(var(--brutal-purple))" />
+													<StatCard icon={StatIcons.cached} label="Cache Read" value={Number(totals.cacheRead || 0).toLocaleString()} sub="Cached prompt hits" bg="hsl(var(--brutal-ember) / 0.45)" plate="hsl(var(--brutal-ember))" />
+													<StatCard icon={StatIcons.cacheCreation} label="Cache Creation" value={Number(totals.cacheCreation || 0).toLocaleString()} sub="Cached write/creation" bg="hsl(var(--brutal-pink) / 0.55)" plate="hsl(var(--brutal-pink))" />
 												</div>
 												<StatCard icon={StatIcons.cost} label="Est. Total Cost" value={`$${Number(totals.cost || 0).toFixed(4)}`} sub="Combined estimated cost" bg="hsl(var(--brutal-green) / 0.55)" plate="hsl(var(--brutal-green))" />
 											</>
