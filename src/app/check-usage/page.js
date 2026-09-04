@@ -106,6 +106,42 @@ const StatIcons = {
       <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3" />
     </svg>
   ),
+  input: (
+    <svg {...iconProps}>
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+    </svg>
+  ),
+  output: (
+    <svg {...iconProps}>
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+    </svg>
+  ),
+  successes: (
+    <svg {...iconProps}>
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  ),
+  cacheCreation: (
+    <svg {...iconProps}>
+      <path d="M12 2v4" />
+      <path d="M12 18v4" />
+      <path d="M4.93 4.93l2.83 2.83" />
+      <path d="M16.24 16.24l2.83 2.83" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ),
+  reasoning: (
+    <svg {...iconProps}>
+      <path d="M9.5 4.5A3.5 3.5 0 0 0 6 8v.3A3.5 3.5 0 0 0 4.5 15H6a3.5 3.5 0 0 0 3.5 3.5V4.5Z" />
+      <path d="M14.5 4.5A3.5 3.5 0 0 1 18 8v.3a3.5 3.5 0 0 1 1.5 6.7H18a3.5 3.5 0 0 1-3.5 3.5V4.5Z" />
+      <path d="M9.5 9H7.5M14.5 9h2M9.5 14H7M14.5 14h2.5" />
+    </svg>
+  ),
   cost: (
     <svg {...iconProps}>
       <circle cx="12" cy="12" r="9" />
@@ -316,6 +352,32 @@ export default function CheckUsagePage() {
   const [refreshing, setRefreshing] = useState(false);
   const [barWidth, setBarWidth] = useState(0);
 
+  // All Time Usage Stats state from https://dashboard.afandiaziz.dev/api/omniroute/usage-stats
+  const [allTimeData, setAllTimeData] = useState(null);
+  const [allTimeLoading, setAllTimeLoading] = useState(true);
+  const [allTimeError, setAllTimeError] = useState("");
+
+  const fetchAllTimeStats = async () => {
+    setAllTimeLoading(true);
+    setAllTimeError("");
+    try {
+      const res = await fetch("https://dashboard.afandiaziz.dev/api/omniroute/usage-stats", {
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      setAllTimeData(json);
+    } catch (err) {
+      setAllTimeError(err?.message || "Failed to load all-time stats");
+    } finally {
+      setAllTimeLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllTimeStats();
+  }, []);
+
   const COOKIE_NAME = "qsk";
   const readCookie = (name) => {
     if (typeof document === "undefined") return "";
@@ -428,7 +490,7 @@ export default function CheckUsagePage() {
 
   return (
     <div className="brutal-scope bg-dots flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-5xl py-10">
+      <div className="w-full max-w-7xl py-10">
         {/* Hero */}
         <div className="flex flex-col items-center mb-8">
           <div className="animate-float b-card shadow-brutal mb-4 p-3">
@@ -481,223 +543,370 @@ export default function CheckUsagePage() {
           </form>
         ) : (
           <div className="space-y-4 animate-reveal-up">
-            {/* Actions - Full width at the top */}
-            <div className="flex gap-3 w-full">
-              <button onClick={handleRefresh} disabled={refreshing} className="b-btn flex-1">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className={refreshing ? "animate-spin-slow" : ""}
-                >
-                  <path d="M23 4v6h-6" />
-                  <path d="M1 20v-6h6" />
-                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                </svg>
-                {refreshing ? "Refreshing..." : "Refresh"}
-              </button>
-              <button
-                onClick={() => {
-                  setResult(null);
-                  setKey("");
-                  clearKeyCookie();
-                }}
-                className="b-btn-ghost flex-1"
-              >
-                Check Another Key
-              </button>
-            </div>
-
-            {/* Single Outer Card with 2-Column Responsive Grid */}
-            <div className="b-card shadow-brutal p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                {/* Column 1 (Left) */}
-                <div className="space-y-5">
-                  {/* Header */}
-                  <div className="flex justify-between items-center gap-3">
-                    <div className="min-w-0">
-                      <span className="font-bold text-lg" style={{ color: "hsl(var(--primary))" }}>
-                        {result.name}
-                      </span>
-                      <span className="ml-2 font-mono text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
-                        {result.keyPrefix}
-                      </span>
-                    </div>
-                    <span className={`b-badge ${result.isActive ? "b-badge-ok" : "b-badge-bad"}`}>
-                      {result.isActive ? "Active" : "Disabled"}
-                    </span>
-                  </div>
-
-                  {/* Base URL */}
-                  {baseUrl && (
-                    <div className="b-card shadow-brutal-sm p-3 flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-xs mb-1" style={{ color: "hsl(var(--muted-foreground))" }}>Base URL</p>
-                        <p className="text-sm font-mono truncate">{baseUrl}/v1</p>
-                      </div>
-                      <CopyButton text={`${baseUrl}/v1`} label="Base URL" />
-                    </div>
-                  )}
-
-                  {/* Token usage bar */}
-                  <div>
-                    <div className="flex justify-between text-sm mb-1 font-bold">
-                      <span>Token Usage ({result.limitPeriod})</span>
-                      <span>{result.percent != null ? `${result.percent}%` : "Unlimited"}</span>
-                    </div>
-                    <div className="b-progress-track">
-                      <div
-                        className="b-progress-fill"
-                        style={{ width: `${barWidth}%`, background: barColor, borderRight: barWidth ? "2px solid #000" : "none" }}
-                      />
-                    </div>
-                    <p className="text-sm mt-1 font-medium" style={{ color: "hsl(var(--foreground))" }}>
-                      {result.tokensUsed?.toLocaleString()} / {result.limit?.toLocaleString() || "∞"} tokens
-                    </p>
-                    {result.resetsAt && (
-                      <p className="text-xs mt-0.5" style={{ color: "hsl(var(--foreground))" }}>
-                        Resets: {new Date(result.resetsAt).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Stat Cards - Mobile only (shown directly under Token Usage on mobile) */}
-                  <div className="block lg:hidden space-y-2">
-                    <h3 className="text-sm font-bold">Detail Usage Quota Tokens</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                      <StatCard
-                        icon={StatIcons.requests}
-                        label="Total Requests"
-                        value={(result.totalRequests ?? 0).toLocaleString()}
-                        sub={`In current ${result.limitPeriod} window`}
-                        bg="hsl(var(--brutal-yellow) / 0.55)"
-                        plate="hsl(var(--brutal-yellow))"
-                      />
-                      <StatCard
-                        icon={StatIcons.tokens}
-                        label="Total Tokens"
-                        value={((result.totalTokens?.prompt || 0) + (result.totalTokens?.completion || 0)).toLocaleString()}
-                        sub={`In: ${compactNum(result.totalTokens?.prompt)} | Out: ${compactNum(result.totalTokens?.completion)}`}
-                        bg="hsl(var(--brutal-blue) / 0.55)"
-                        plate="hsl(var(--brutal-blue))"
-                      />
-                      <StatCard
-                        icon={StatIcons.cached}
-                        label="Cached Tokens"
-                        value={(result.totalTokens?.cachedRead || 0).toLocaleString()}
-                        sub={`Read: ${compactNum(result.totalTokens?.cachedRead)} | Write: ${compactNum(result.totalTokens?.cachedWrite)}`}
-                        bg="hsl(var(--brutal-green) / 0.55)"
-                        plate="hsl(var(--brutal-green))"
-                      />
-                      <StatCard
-                        icon={StatIcons.cost}
-                        label="Est. Cost"
-                        value={`$${(result.totalTokens?.cost ?? 0).toFixed(4)}`}
-                        sub="Estimated token cost"
-                        bg="hsl(var(--brutal-purple) / 0.55)"
-                        plate="hsl(var(--brutal-purple))"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Allowed Models (directly under Token Usage on desktop) */}
-                  {result.allowedModels?.length > 0 ? (
-                    <div>
-                      <h3 className="text-sm font-bold mb-2">Allowed Models</h3>
-                      <p className="text-xs mb-3" style={{ color: "hsl(var(--muted-foreground))" }}>
-                        Click a model name or Copy button to copy.
-                      </p>
-                      <div className="space-y-2.5">
-                        {result.allowedModels.map((m, i) => (
-                          <ModelCard key={i} modelItem={m} />
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <h3 className="text-sm font-bold mb-1">Allowed Models</h3>
-                      <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
-                        All models allowed
-                      </p>
-                    </div>
-                  )}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+              {/* Sisi Kiri: Quota Sharing (Actions + Card Quota Sharing) */}
+              <div className="space-y-4">
+                {/* Actions - Full width at the top of left side */}
+                <div className="flex gap-3 w-full">
+                  <button onClick={handleRefresh} disabled={refreshing} className="b-btn flex-1">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className={refreshing ? "animate-spin-slow" : ""}
+                    >
+                      <path d="M23 4v6h-6" />
+                      <path d="M1 20v-6h6" />
+                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                    </svg>
+                    {refreshing ? "Refreshing..." : "Refresh"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setResult(null);
+                      setKey("");
+                      clearKeyCookie();
+                    }}
+                    className="b-btn-ghost flex-1"
+                  >
+                    Check Another Key
+                  </button>
                 </div>
 
-                {/* Column 2 (Right) */}
-                <div className="space-y-5">
-                  {/* Stat Cards - Desktop only (top of right column) */}
-                  <div className="hidden lg:block space-y-2">
-                    <h3 className="text-sm font-bold">Detail Usage Quota Tokens</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                      <StatCard
-                        icon={StatIcons.requests}
-                        label="Total Requests"
-                        value={(result.totalRequests ?? 0).toLocaleString()}
-                        sub={`In current ${result.limitPeriod} window`}
-                        bg="hsl(var(--brutal-yellow) / 0.55)"
-                        plate="hsl(var(--brutal-yellow))"
-                      />
-                      <StatCard
-                        icon={StatIcons.tokens}
-                        label="Total Tokens"
-                        value={((result.totalTokens?.prompt || 0) + (result.totalTokens?.completion || 0)).toLocaleString()}
-                        sub={`In: ${compactNum(result.totalTokens?.prompt)} | Out: ${compactNum(result.totalTokens?.completion)}`}
-                        bg="hsl(var(--brutal-blue) / 0.55)"
-                        plate="hsl(var(--brutal-blue))"
-                      />
-                      <StatCard
-                        icon={StatIcons.cached}
-                        label="Cached Tokens"
-                        value={(result.totalTokens?.cachedRead || 0).toLocaleString()}
-                        sub={`Read: ${compactNum(result.totalTokens?.cachedRead)} | Write: ${compactNum(result.totalTokens?.cachedWrite)}`}
-                        bg="hsl(var(--brutal-green) / 0.55)"
-                        plate="hsl(var(--brutal-green))"
-                      />
-                      <StatCard
-                        icon={StatIcons.cost}
-                        label="Est. Cost"
-                        value={`$${(result.totalTokens?.cost ?? 0).toFixed(4)}`}
-                        sub="Estimated token cost"
-                        bg="hsl(var(--brutal-purple) / 0.55)"
-                        plate="hsl(var(--brutal-purple))"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Usage by Model - sorted descending by (tokens + cached), scrollable max 5 */}
-                  {result.perModel?.length > 0 && (
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-sm font-bold">Usage by Model</h3>
-                        <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
-                          Sorted by total tokens + cached
+                {/* Quota Sharing Outer Card */}
+                <div className="b-card shadow-brutal p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                    {/* Column 1 (Left) */}
+                    <div className="space-y-5">
+                      {/* Header */}
+                      <div className="flex justify-between items-center gap-3">
+                        <div className="min-w-0">
+                          <span className="font-bold text-lg" style={{ color: "hsl(var(--primary))" }}>
+                            {result.name}
+                          </span>
+                          <span className="ml-2 font-mono text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                            {result.keyPrefix}
+                          </span>
+                        </div>
+                        <span className={`b-badge ${result.isActive ? "b-badge-ok" : "b-badge-bad"}`}>
+                          {result.isActive ? "Active" : "Disabled"}
                         </span>
                       </div>
-                      <div className="b-model-usage-list space-y-2">
-                        {result.perModel.map((m, i) => (
-                          <div key={i} className="b-model-usage-item">
-                            <div className="min-w-0 pr-2">
-                              <span className="font-mono text-sm font-bold block truncate" title={m.model}>
-                                {m.model}
-                              </span>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <span className="font-mono text-sm font-bold block">
-                                {(m.totalWithCached ?? m.tokens).toLocaleString()} total
-                              </span>
-                              <span className="font-mono text-xs block" style={{ color: "hsl(var(--muted-foreground))" }}>
-                                Tokens: {m.tokens?.toLocaleString() || 0} · Cached: {m.cachedTokens?.toLocaleString() || 0}
-                              </span>
-                            </div>
+
+                      {/* Base URL */}
+                      {baseUrl && (
+                        <div className="b-card shadow-brutal-sm p-3 flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-xs mb-1" style={{ color: "hsl(var(--muted-foreground))" }}>Base URL</p>
+                            <p className="text-sm font-mono truncate">{baseUrl}/v1</p>
                           </div>
-                        ))}
+                          <CopyButton text={`${baseUrl}/v1`} label="Base URL" />
+                        </div>
+                      )}
+
+                      {/* Token usage bar */}
+                      <div>
+                        <div className="flex justify-between text-sm mb-1 font-bold">
+                          <span>Token Usage ({result.limitPeriod})</span>
+                          <span>{result.percent != null ? `${result.percent}%` : "Unlimited"}</span>
+                        </div>
+                        <div className="b-progress-track">
+                          <div
+                            className="b-progress-fill"
+                            style={{ width: `${barWidth}%`, background: barColor, borderRight: barWidth ? "2px solid #000" : "none" }}
+                          />
+                        </div>
+                        <p className="text-sm mt-1 font-medium" style={{ color: "hsl(var(--foreground))" }}>
+                          {result.tokensUsed?.toLocaleString()} / {result.limit?.toLocaleString() || "∞"} tokens
+                        </p>
+                        {result.resetsAt && (
+                          <p className="text-xs mt-0.5" style={{ color: "hsl(var(--foreground))" }}>
+                            Resets: {new Date(result.resetsAt).toLocaleString()}
+                          </p>
+                        )}
                       </div>
+
+                      {/* Stat Cards - Mobile only (shown directly under Token Usage on mobile) */}
+                      <div className="block lg:hidden space-y-2">
+                        <h3 className="text-sm font-bold">Detail Usage Quota Tokens</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          <StatCard
+                            icon={StatIcons.requests}
+                            label="Total Requests"
+                            value={(result.totalRequests ?? 0).toLocaleString()}
+                            sub={`In current ${result.limitPeriod} window`}
+                            bg="hsl(var(--brutal-yellow) / 0.55)"
+                            plate="hsl(var(--brutal-yellow))"
+                          />
+                          <StatCard
+                            icon={StatIcons.tokens}
+                            label="Total Tokens"
+                            value={((result.totalTokens?.prompt || 0) + (result.totalTokens?.completion || 0)).toLocaleString()}
+                            sub={`In: ${compactNum(result.totalTokens?.prompt)} | Out: ${compactNum(result.totalTokens?.completion)}`}
+                            bg="hsl(var(--brutal-blue) / 0.55)"
+                            plate="hsl(var(--brutal-blue))"
+                          />
+                          <StatCard
+                            icon={StatIcons.cached}
+                            label="Cached Tokens"
+                            value={(result.totalTokens?.cachedRead || 0).toLocaleString()}
+                            sub={`Read: ${compactNum(result.totalTokens?.cachedRead)} | Write: ${compactNum(result.totalTokens?.cachedWrite)}`}
+                            bg="hsl(var(--brutal-green) / 0.55)"
+                            plate="hsl(var(--brutal-green))"
+                          />
+                          <StatCard
+                            icon={StatIcons.cost}
+                            label="Est. Cost"
+                            value={`$${(result.totalTokens?.cost ?? 0).toFixed(4)}`}
+                            sub="Estimated token cost"
+                            bg="hsl(var(--brutal-purple) / 0.55)"
+                            plate="hsl(var(--brutal-purple))"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Allowed Models (directly under Token Usage on desktop) */}
+                      {result.allowedModels?.length > 0 ? (
+                        <div>
+                          <h3 className="text-sm font-bold mb-2">Allowed Models</h3>
+                          <p className="text-xs mb-3" style={{ color: "hsl(var(--muted-foreground))" }}>
+                            Click a model name or Copy button to copy.
+                          </p>
+                          <div className="space-y-2.5">
+                            {result.allowedModels.map((m, i) => (
+                              <ModelCard key={i} modelItem={m} />
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <h3 className="text-sm font-bold mb-1">Allowed Models</h3>
+                          <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                            All models allowed
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  )}
+
+                    {/* Column 2 (Right) */}
+                    <div className="space-y-5">
+                      {/* Stat Cards - Desktop only (top of right column) */}
+                      <div className="hidden lg:block space-y-2">
+                        <h3 className="text-sm font-bold">Detail Usage Quota Tokens</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          <StatCard
+                            icon={StatIcons.requests}
+                            label="Total Requests"
+                            value={(result.totalRequests ?? 0).toLocaleString()}
+                            sub={`In current ${result.limitPeriod} window`}
+                            bg="hsl(var(--brutal-yellow) / 0.55)"
+                            plate="hsl(var(--brutal-yellow))"
+                          />
+                          <StatCard
+                            icon={StatIcons.tokens}
+                            label="Total Tokens"
+                            value={((result.totalTokens?.prompt || 0) + (result.totalTokens?.completion || 0)).toLocaleString()}
+                            sub={`In: ${compactNum(result.totalTokens?.prompt)} | Out: ${compactNum(result.totalTokens?.completion)}`}
+                            bg="hsl(var(--brutal-blue) / 0.55)"
+                            plate="hsl(var(--brutal-blue))"
+                          />
+                          <StatCard
+                            icon={StatIcons.cached}
+                            label="Cached Tokens"
+                            value={(result.totalTokens?.cachedRead || 0).toLocaleString()}
+                            sub={`Read: ${compactNum(result.totalTokens?.cachedRead)} | Write: ${compactNum(result.totalTokens?.cachedWrite)}`}
+                            bg="hsl(var(--brutal-green) / 0.55)"
+                            plate="hsl(var(--brutal-green))"
+                          />
+                          <StatCard
+                            icon={StatIcons.cost}
+                            label="Est. Cost"
+                            value={`$${(result.totalTokens?.cost ?? 0).toFixed(4)}`}
+                            sub="Estimated token cost"
+                            bg="hsl(var(--brutal-purple) / 0.55)"
+                            plate="hsl(var(--brutal-purple))"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Usage by Model - sorted descending by (tokens + cached), scrollable max 5 */}
+                      {result.perModel?.length > 0 && (
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-sm font-bold">Usage by Model</h3>
+                            <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                              Sorted by total tokens + cached
+                            </span>
+                          </div>
+                          <div className="b-model-usage-list space-y-2">
+                            {result.perModel.map((m, i) => (
+                              <div key={i} className="b-model-usage-item">
+                                <div className="min-w-0 pr-2">
+                                  <span className="font-mono text-sm font-bold block truncate" title={m.model}>
+                                    {m.model}
+                                  </span>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <span className="font-mono text-sm font-bold block">
+                                    {(m.totalWithCached ?? m.tokens).toLocaleString()} total
+                                  </span>
+                                  <span className="font-mono text-xs block" style={{ color: "hsl(var(--muted-foreground))" }}>
+                                    Tokens: {m.tokens?.toLocaleString() || 0} · Cached: {m.cachedTokens?.toLocaleString() || 0}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              {/* Sisi Kanan: Kartu Baru All Time Usage Tokens */}
+              <div className="b-card shadow-brutal p-6 space-y-5">
+                {/* Header */}
+                <div className="flex justify-between items-center gap-3">
+                  <div className="min-w-0">
+                    <h2 className="font-bold text-lg" style={{ color: "hsl(var(--primary))" }}>
+                      All Time Usage Tokens
+                    </h2>
+                    <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                      Aggregated across OmniRoute & 9router
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={fetchAllTimeStats}
+                      disabled={allTimeLoading}
+                      className="b-chip hover-tilt-shake"
+                      title="Refresh All Time Stats"
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        className={allTimeLoading ? "animate-spin-slow" : ""}
+                      >
+                        <path d="M23 4v6h-6" />
+                        <path d="M1 20v-6h6" />
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                      </svg>
+                    </button>
+                    <span className="b-badge b-badge-ok">All Time</span>
+                  </div>
+                </div>
+
+                {allTimeLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-pulse-soft">
+                    {Array.from({ length: 10 }).map((_, idx) => (
+                      <div key={idx} className="b-card shadow-brutal-sm p-3 h-20 bg-muted/40" />
+                    ))}
+                  </div>
+                ) : allTimeError ? (
+                  <div className="space-y-3">
+                    <p className="b-alert">{allTimeError}</p>
+                    <button type="button" onClick={fetchAllTimeStats} className="b-btn-ghost w-full">
+                      Retry Loading All Time Stats
+                    </button>
+                  </div>
+                ) : (
+                  (() => {
+                    const totals = allTimeData?.totals || allTimeData?.data?.totals || {};
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <StatCard
+                          icon={StatIcons.tokens}
+                          label="Total Tokens"
+                          value={Number(totals.tokens || 0).toLocaleString()}
+                          sub="Lifetime processed tokens"
+                          bg="hsl(var(--brutal-yellow) / 0.55)"
+                          plate="hsl(var(--brutal-yellow))"
+                        />
+                        <StatCard
+                          icon={StatIcons.input}
+                          label="Input Tokens"
+                          value={Number(totals.input || 0).toLocaleString()}
+                          sub="Prompt input tokens"
+                          bg="hsl(var(--brutal-blue) / 0.55)"
+                          plate="hsl(var(--brutal-blue))"
+                        />
+                        <StatCard
+                          icon={StatIcons.output}
+                          label="Output Tokens"
+                          value={Number(totals.output || 0).toLocaleString()}
+                          sub="Completion output tokens"
+                          bg="hsl(var(--brutal-orange) / 0.55)"
+                          plate="hsl(var(--brutal-orange))"
+                        />
+                        <StatCard
+                          icon={StatIcons.cached}
+                          label="Total Cached"
+                          value={Number(totals.cached || 0).toLocaleString()}
+                          sub="Total cached prompt tokens"
+                          bg="hsl(var(--brutal-green) / 0.55)"
+                          plate="hsl(var(--brutal-green))"
+                        />
+                        <StatCard
+                          icon={StatIcons.cached}
+                          label="Cache Read"
+                          value={Number(totals.cacheRead || 0).toLocaleString()}
+                          sub="Cached prompt hits"
+                          bg="hsl(var(--brutal-green) / 0.45)"
+                          plate="hsl(var(--brutal-green))"
+                        />
+                        <StatCard
+                          icon={StatIcons.cacheCreation}
+                          label="Cache Creation"
+                          value={Number(totals.cacheCreation || 0).toLocaleString()}
+                          sub="Cached write/creation"
+                          bg="hsl(var(--brutal-pink) / 0.55)"
+                          plate="hsl(var(--brutal-pink))"
+                        />
+                        <StatCard
+                          icon={StatIcons.reasoning}
+                          label="Reasoning Tokens"
+                          value={Number(totals.reasoning || 0).toLocaleString()}
+                          sub="Chain-of-thought tokens"
+                          bg="hsl(var(--brutal-yellow) / 0.45)"
+                          plate="hsl(var(--brutal-yellow))"
+                        />
+                        <StatCard
+                          icon={StatIcons.requests}
+                          label="Total Requests"
+                          value={Number(totals.requests || 0).toLocaleString()}
+                          sub="Lifetime API calls"
+                          bg="hsl(var(--brutal-blue) / 0.45)"
+                          plate="hsl(var(--brutal-blue))"
+                        />
+                        <StatCard
+                          icon={StatIcons.successes}
+                          label="Successes"
+                          value={Number(totals.successes || 0).toLocaleString()}
+                          sub="Successful requests"
+                          bg="hsl(var(--brutal-green) / 0.55)"
+                          plate="hsl(var(--brutal-green))"
+                        />
+                        <StatCard
+                          icon={StatIcons.cost}
+                          label="Est. Total Cost"
+                          value={`$${Number(totals.cost || 0).toFixed(4)}`}
+                          sub="Combined estimated cost"
+                          bg="hsl(var(--brutal-purple) / 0.55)"
+                          plate="hsl(var(--brutal-purple))"
+                        />
+                      </div>
+                    );
+                  })()
+                )}
               </div>
             </div>
           </div>
