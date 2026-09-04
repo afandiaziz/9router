@@ -613,13 +613,13 @@ export default function CheckUsagePage() {
 												</div>
 											</div>
 
-											{/* Usage by Model - sorted descending by (tokens + cached), scrollable max 5 */}
+											{/* Usage by Model - sorted descending by total tokens, scrollable max 5 */}
 											{result.perModel?.length > 0 && (
 												<div>
 													<div className="flex justify-between items-center mb-2">
 														<h3 className="text-sm font-bold">Usage by Model</h3>
 														<span className="text-xs" style={{color: "hsl(var(--muted-foreground))"}}>
-															Sorted by total tokens + cached
+															Sorted by total tokens
 														</span>
 													</div>
 													<div className="b-model-usage-list space-y-2">
@@ -631,7 +631,7 @@ export default function CheckUsagePage() {
 																	</span>
 																</div>
 																<div className="text-right shrink-0">
-																	<span className="font-mono text-sm font-bold block">{(m.totalWithCached ?? m.tokens).toLocaleString()} total</span>
+																	<span className="font-mono text-sm font-bold block">{(m.tokens ?? 0).toLocaleString()} total</span>
 																	<span className="font-mono text-xs block" style={{color: "hsl(var(--muted-foreground))"}}>
 																		Tokens: {m.tokens?.toLocaleString() || 0} · Cached: {m.cachedTokens?.toLocaleString() || 0}
 																	</span>
@@ -685,9 +685,12 @@ export default function CheckUsagePage() {
 										const totals = allTimeData?.totals || allTimeData?.data?.totals || {};
 										return (
 											<>
-												<StatCard icon={StatIcons.requests} label="Total Requests" value={Number(totals.requests || 0).toLocaleString()} sub="Lifetime API calls" bg="hsl(var(--brutal-yellow) / 0.45)" plate="hsl(var(--brutal-yellow))" />
 												<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+													<StatCard icon={StatIcons.requests} label="Total Requests" value={Number(totals.requests || 0).toLocaleString()} sub="Lifetime API calls" bg="hsl(var(--brutal-yellow) / 0.45)" plate="hsl(var(--brutal-yellow))" />
 													<StatCard icon={StatIcons.tokens} label="Total Tokens" value={Number(totals.tokens || 0).toLocaleString()} sub="Lifetime processed tokens" bg="hsl(var(--brutal-blue) / 0.55)" plate="hsl(var(--brutal-blue))" />
+													<StatCard icon={StatIcons.cost} label="Est. Total Cost" value={`> $${Number(totals.cost || 0).toFixed(4)}`} sub="Combined estimated cost" bg="hsl(var(--brutal-green) / 0.55)" plate="hsl(var(--brutal-green))" />
+												</div>
+												<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
 													<StatCard icon={StatIcons.input} label="Input Tokens" value={Number(totals.input || 0).toLocaleString()} sub="Prompt input tokens" bg="hsl(var(--brutal-ember) / 0.55)" plate="hsl(var(--brutal-ember))" />
 													<StatCard icon={StatIcons.output} label="Output Tokens" value={Number(totals.output || 0).toLocaleString()} sub="Completion output tokens" bg="hsl(var(--brutal-lime) / 0.55)" plate="hsl(var(--brutal-lime))" />
 												</div>
@@ -696,7 +699,6 @@ export default function CheckUsagePage() {
 													<StatCard icon={StatIcons.cached} label="Cache Read" value={Number(totals.cacheRead || 0).toLocaleString()} sub="Cached prompt hits" bg="hsl(var(--brutal-ember) / 0.45)" plate="hsl(var(--brutal-ember))" />
 													<StatCard icon={StatIcons.cacheCreation} label="Cache Creation" value={Number(totals.cacheCreation || 0).toLocaleString()} sub="Cached write/creation" bg="hsl(var(--brutal-pink) / 0.55)" plate="hsl(var(--brutal-pink))" />
 												</div>
-												<StatCard icon={StatIcons.cost} label="Est. Total Cost" value={`$${Number(totals.cost || 0).toFixed(4)}`} sub="Combined estimated cost" bg="hsl(var(--brutal-green) / 0.55)" plate="hsl(var(--brutal-green))" />
 											</>
 										);
 									})()

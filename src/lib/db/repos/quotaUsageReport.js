@@ -82,15 +82,13 @@ export async function buildUsageReport(apiKeyRow, progress, db, options = {}) {
         allowedModels.find((e) => suffixMatch(e.model, m.model));
       const tokens = m.tokens;
       const cachedTokens = m.cachedTokens;
-      const totalWithCached = tokens + cachedTokens;
       return {
         model: entry?.alias || m.model,
         tokens,
         cachedTokens,
-        totalWithCached,
       };
     })
-    .sort((a, b) => b.totalWithCached - a.totalWithCached);
+    .sort((a, b) => b.tokens - a.tokens);
 
   return {
     name: apiKeyRow.name,

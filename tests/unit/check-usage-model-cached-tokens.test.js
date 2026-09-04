@@ -8,7 +8,7 @@ describe("buildUsageReport perModel cached tokens and sorting", () => {
     limitPeriod: "monthly",
   };
 
-  it("aggregates cached tokens per model and sorts descending by totalWithCached", async () => {
+  it("aggregates cached tokens per model and sorts descending by tokens", async () => {
     const fakeDb = {
       all: () => [
         {
@@ -46,27 +46,24 @@ describe("buildUsageReport perModel cached tokens and sorting", () => {
 
     const report = await buildUsageReport(apiKeyRow, progress, fakeDb);
 
-    // model-a: tokens=150, cached=500 -> totalWithCached=650
-    // model-b: tokens=300, cached=50  -> totalWithCached=350
-    // model-c: tokens=70,  cached=0   -> totalWithCached=70
+    // model-b: tokens=300 (200 prompt + 100 completion), cached=50
+    // model-a: tokens=150 (100 prompt + 50 completion), cached=500
+    // model-c: tokens=70  (50 prompt + 20 completion), cached=0
     expect(report.perModel).toEqual([
-      {
-        model: "model-a",
-        tokens: 150,
-        cachedTokens: 500,
-        totalWithCached: 650,
-      },
       {
         model: "model-b",
         tokens: 300,
         cachedTokens: 50,
-        totalWithCached: 350,
+      },
+      {
+        model: "model-a",
+        tokens: 150,
+        cachedTokens: 500,
       },
       {
         model: "model-c",
         tokens: 70,
         cachedTokens: 0,
-        totalWithCached: 70,
       },
     ]);
   });
