@@ -6,12 +6,22 @@ import { AI_MODELS } from "@/shared/constants/config";
 import { getProviderAlias } from "@/shared/constants/providers";
 import { getCapabilitiesForModel } from "open-sse/providers/capabilities.js";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/models - Get models with aliases
 export async function GET() {
   try {
     const modelAliases = await getModelAliases();
     const disabled = await getDisabledModels();
     const capsOverrides = await getCapsOverrides();
+
+    // Invert alias mapping: key=alias, val=targetModel -> targetToAlias[targetModel] = alias
+    const targetToAlias = {};
+    for (const [aliasName, target] of Object.entries(modelAliases || {})) {
+      if (typeof target === "string") {
+        targetToAlias[target] = aliasName;
+      }
+    }
 
     const models = AI_MODELS
       .filter((m) => {
@@ -30,7 +40,7 @@ export async function GET() {
           ...m,
           fullModel,
           routedModel,
-          alias: modelAliases[fullModel] || m.model,
+          alias: targetToAlias[fullModel] || targetToAlias[routedModel] || modelAliases[fullModel] || m.model,
           caps: {
             vision: c.vision,
             search: c.search,
@@ -56,22 +66,29 @@ export async function GET() {
     });
     for (const m of customModels) {
       const fullModel = `${m.providerAlias}/${m.id}`;
-      const c = getCapabilitiesForModel(m.providerAlias, m.id);
+      const override = capsOverrides[`${m.providerAlias}|${m.id}`];
+      const c = { ...getCapabilitiesForModel(m.providerAlias, m.id), ...(m.caps || {}), ...(override || {}) };
       models.push({
         provider: m.providerAlias,
         model: m.id,
         name: m.name || m.id,
         fullModel,
         routedModel: fullModel,
-        alias: modelAliases[fullModel] || m.id,
+        alias: targetToAlias[fullModel] || modelAliases[fullModel] || m.id,
         caps: {
           vision: c.vision,
           search: c.search,
           reasoning: c.reasoning,
+          tools: c.tools,
+          pdf: c.pdf,
+          imageOutput: c.imageOutput,
+          audioInput: c.audioInput,
+          videoInput: c.videoInput,
+          audioOutput: c.audioOutput,
           contextWindow: c.contextWindow,
           maxOutput: c.maxOutput,
-          ...(m.caps || {}),
         },
+        ...(override ? { capsOverridden: true } : {}),
       });
     }
 
@@ -95,16 +112,13 @@ export async function PUT(request) {
     const modelAliases = await getModelAliases();
 
     // Check if alias already exists for different model
-    const existingModel = Object.entries(modelAliases).find(
-      ([key, val]) => val === alias && key !== model
-    );
-
-    if (existingModel) {
+    const existingModel = modelAliases[alias];
+    if (existingModel && existingModel !== model) {
       return NextResponse.json({ error: "Alias already in use" }, { status: 400 });
     }
 
-    // Update alias
-    await setModelAlias(model, alias);
+    // Update alias: setModelAlias(alias, model)
+    await setModelAlias(alias, model);
 
     return NextResponse.json({ success: true, model, alias });
   } catch (error) {

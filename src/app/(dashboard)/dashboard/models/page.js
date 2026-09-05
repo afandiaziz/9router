@@ -43,15 +43,15 @@ export default function ModelsPage() {
   const fetchData = useCallback(async () => {
     try {
       const [customRes, combosRes, disabledRes, aliasRes, pricingRes, capsRes, mdRes, provRes, nodesRes] = await Promise.all([
-        fetch("/api/models/custom"),
-        fetch("/api/combos"),
-        fetch("/api/models/disabled"),
-        fetch("/api/models/alias"),
-        fetch("/api/pricing"),
-        fetch("/api/models/caps"),
-        fetch("/api/models-dev"),
-        fetch("/api/providers"),
-        fetch("/api/provider-nodes"),
+        fetch("/api/models/custom", { cache: "no-store" }),
+        fetch("/api/combos", { cache: "no-store" }),
+        fetch("/api/models/disabled", { cache: "no-store" }),
+        fetch("/api/models/alias", { cache: "no-store" }),
+        fetch("/api/pricing", { cache: "no-store" }),
+        fetch("/api/models/caps", { cache: "no-store" }),
+        fetch("/api/models-dev", { cache: "no-store" }),
+        fetch("/api/providers", { cache: "no-store" }),
+        fetch("/api/provider-nodes", { cache: "no-store" }),
       ]);
       if (customRes.ok) {
         const data = await customRes.json();
@@ -231,7 +231,11 @@ export default function ModelsPage() {
   );
 
   const getAliasFor = useCallback(
-    (row) => aliasByModel[`${row.providerId}/${row.id}`] || aliasByModel[`${row.providerAlias}/${row.id}`] || "",
+    (row) =>
+      aliasByModel[`${row.providerId}/${row.id}`] ||
+      aliasByModel[`${row.providerAlias}/${row.id}`] ||
+      aliasByModel[row.id] ||
+      "",
     [aliasByModel]
   );
 
@@ -319,7 +323,7 @@ export default function ModelsPage() {
     return {
       aliasKey: row.isCustom ? `${row.providerAlias}/${row.id}` : `${row.providerId}/${row.id}`,
       staticCaps,
-      caps: { ...staticCaps, ...effectiveCaps },
+      caps: { ...staticCaps, ...effectiveCaps, ...(override || {}) },
       override,
       pricing: getPricingFor(row),
     };
@@ -544,19 +548,22 @@ export default function ModelsPage() {
               {action?.error && <p className="text-xs text-red-500 my-2">{action.error}</p>}
               {!isCollapsed && (
                 <div id={`models-${group.key}`} className="flex flex-col gap-1.5 mt-3">
-                  {group.models.map((row) => (
-                    <ModelRow
-                      key={row.key}
-                      row={row}
-                      caps={row.isCombo ? getPresentationFor(row).caps : getCaps(`${row.providerAlias}/${row.id}`)}
-                      alias={getAliasFor(row)}
-                      disabled={row.isCombo ? false : isDisabled(row)}
-                      price={row.isCombo ? getPresentationFor(row).pricing : getPricingFor(row)}
-                      onEdit={() => openEdit(row)}
-                      onToggleDisabled={row.isCombo ? null : () => handleToggleDisabled(row, isDisabled(row))}
-                      onDelete={!row.isCombo && row.isCustom ? () => handleDeleteCustom(row) : null}
-                    />
-                  ))}
+                  {group.models.map((row) => {
+                    const presentation = getPresentationFor(row);
+                    return (
+                      <ModelRow
+                        key={row.key}
+                        row={row}
+                        caps={presentation.caps}
+                        alias={getAliasFor(row)}
+                        disabled={row.isCombo ? false : isDisabled(row)}
+                        price={presentation.pricing}
+                        onEdit={() => openEdit(row)}
+                        onToggleDisabled={row.isCombo ? null : () => handleToggleDisabled(row, isDisabled(row))}
+                        onDelete={!row.isCombo && row.isCustom ? () => handleDeleteCustom(row) : null}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </Card>

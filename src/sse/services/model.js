@@ -96,6 +96,15 @@ export async function getModelInfo(modelStr) {
         return { provider: matchedEmbedding.id, model: parsed.model };
       }
     }
+    // Check if the model part itself was defined as a model alias (e.g. client sent `cx/my-alias` or `codex/my-alias`)
+    const aliases = await getModelAliases();
+    if (aliases && aliases[parsed.model]) {
+      const resolved = resolveModelAliasFromMap(parsed.model, aliases);
+      if (resolved) {
+        return resolved;
+      }
+    }
+
     return {
       provider: parsed.provider,
       model: parsed.model

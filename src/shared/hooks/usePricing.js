@@ -20,7 +20,7 @@ export function invalidatePricingCache() {
 function loadPricing() {
   if (cache) return Promise.resolve(cache);
   if (inflight) return inflight;
-  inflight = fetch("/api/pricing")
+  inflight = fetch("/api/pricing", { cache: "no-store" })
     .then(async (res) => {
       if (!res.ok) throw new Error(`pricing ${res.status}`);
       return res.json();

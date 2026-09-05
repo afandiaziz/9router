@@ -34,11 +34,11 @@ function loadModelCaps() {
   if (cache) return Promise.resolve(cache);
   if (inflight) return inflight;
   inflight = Promise.all([
-    fetch("/api/models").then(async (res) => {
+    fetch("/api/models", { cache: "no-store" }).then(async (res) => {
       if (!res.ok) throw new Error(`models ${res.status}`);
       return res.json();
     }),
-    fetch("/api/models/caps").then(async (res) => {
+    fetch("/api/models/caps", { cache: "no-store" }).then(async (res) => {
       if (!res.ok) throw new Error(`caps ${res.status}`);
       return res.json();
     }),
@@ -72,17 +72,18 @@ const pickCaps = (c) => ({
 // Resolve caps from a "provider/model" string or a bare model id.
 function resolveCaps(byFull, byId, overrides, key) {
   if (!key) return null;
-  if (byFull[key]) return byFull[key]; // built-ins: server already merged overrides
   const bare = key.includes("/") ? key.slice(key.indexOf("/") + 1) : key;
   const provider = key.includes("/") ? key.slice(0, key.indexOf("/")) : null;
-  // Provider-specific override wins over a cross-provider byId match
-  // (e.g. custom "ollama/glm-5.2" must not inherit built-in glm-5.2 caps).
-  const override = provider ? overrides[`${provider}|${bare}`] : null;
+
+  // Provider-specific override wins over static maps
+  // (check both `provider|bare` and full key format)
+  const override = provider ? (overrides[`${provider}|${bare}`] || overrides[key]) : (overrides[key] || null);
+  const baseCaps = byFull[key] || (byId[bare] ? byId[bare] : pickCaps(getCapabilitiesForModel(provider, bare)));
+
   if (override) {
-    return pickCaps({ ...getCapabilitiesForModel(provider, bare), ...override });
+    return pickCaps({ ...baseCaps, ...override });
   }
-  if (byId[bare]) return byId[bare];
-  return pickCaps(getCapabilitiesForModel(provider, bare));
+  return baseCaps;
 }
 
 export function useModelCaps() {
