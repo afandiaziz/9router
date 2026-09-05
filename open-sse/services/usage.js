@@ -24,7 +24,6 @@ import {
   getOllamaUsage,
   getVercelAiGatewayUsage,
   getQoderUsage,
-  getOpencodeGoUsage,
   getCommandCodeUsage,
 } from "./usage/misc.js";
 
@@ -59,11 +58,10 @@ const USAGE_HANDLERS = {
   "grok-cli": (c) => getGrokCliUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
   kimi: (c) => getKimiUsage(c.accessToken, c.apiKey, c.proxyOptions, c.providerSpecificData),
   "opencode-go": (c) => getOpenCodeGoUsage(c.apiKey, c.proxyOptions),
+  ocg: (c) => getOpenCodeGoUsage(c.apiKey, c.proxyOptions),
   deepseek: (c) => getDeepseekUsage(c.apiKey, c.proxyOptions),
   groq: (c) => getGroqUsage(c.apiKey, c.proxyOptions),
   zed: (c) => getZedUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
-  ocg: (c) => getOpencodeGoUsage(c.apiKey, c.proxyOptions),
-  "opencode-go": (c) => getOpencodeGoUsage(c.apiKey, c.proxyOptions),
   commandcode: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
   cmc: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
 };

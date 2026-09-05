@@ -153,13 +153,16 @@ describe("OpenCode Go thinking-suffix metadata lookup (review: generic trailing 
 });
 
 describe("OpenCode Free (oc) registry — Responses-only Muse Spark Free", () => {
-  const FREE_ID = "muse-spark-1.2-contributor-free";
-
-  it("declares the exact free model on the oc alias with openai-responses support", () => {
+  it("declares the exact free models on the oc alias with openai-responses support", () => {
     const ids = (PROVIDER_MODELS.oc || []).map((m) => m.id);
-    expect(ids).toEqual([FREE_ID]);
-    expect(getModelSupportedFormats("oc", FREE_ID)).toEqual(["openai-responses"]);
-    expect(getModelTargetFormat("oc", FREE_ID)).toBe("openai-responses");
+    expect(ids).toEqual([
+      "muse-spark-1.2-contributor-free",
+      "muse-spark-1.3-contributor-free",
+    ]);
+    for (const freeId of ids) {
+      expect(getModelSupportedFormats("oc", freeId)).toEqual(["openai-responses"]);
+      expect(getModelTargetFormat("oc", freeId)).toBe("openai-responses");
+    }
   });
 
   it("keeps dynamic modelsFetcher + passthrough and only the Responses transport (no sibling)", () => {
