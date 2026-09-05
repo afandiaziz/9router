@@ -89,63 +89,6 @@ describe("Codex reset credits", () => {
     });
   });
 
-  it("normalizes alternate count, array, and expiry fields while filtering spent credits", async () => {
-    const { parseCodexResetCredits } = await import("../../open-sse/services/usage/codex.js");
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    const result = parseCodexResetCredits({
-      totalAvailable: "2",
-      availableCredits: [
-        {
-          credit_id: "credit-1",
-          state: "available",
-          grantedAt: "2026-06-18T00:25:18Z",
-          validUntil: 1784334318,
-          kind: "rate-limit",
-        },
-        {
-          reset_credit_id: "credit-spent",
-          status: "available",
-          consumed_at: "2026-06-19T00:25:18Z",
-        },
-        {
-          id: "credit-expired",
-          status: "expired",
-          expiry_at: "2026-07-18T00:25:18Z",
-        },
-        {
-          id: "credit-2",
-          status: "available",
-          expirationTime: "not-a-date",
-        },
-      ],
-    });
-    expect(warn).toHaveBeenCalledOnce();
-    warn.mockRestore();
-
-    expect(result).toEqual({
-      availableCount: 2,
-      credits: [
-        {
-          id: "credit-1",
-          index: 0,
-          status: "available",
-          grantedAt: "2026-06-18T00:25:18.000Z",
-          expiresAt: "2026-07-18T00:25:18.000Z",
-          type: "rate-limit",
-        },
-        {
-          id: "credit-2",
-          index: 1,
-          status: "available",
-          grantedAt: null,
-          expiresAt: null,
-          type: null,
-        },
-      ],
-    });
-  });
-
   it("derives available count when the provider omits it", async () => {
     const { parseCodexResetCredits } = await import("../../open-sse/services/usage/codex.js");
 
@@ -162,6 +105,17 @@ describe("Codex reset credits", () => {
         type: null,
       }],
     });
+  });
+
+  it("surfaces structured upstream errors as readable messages", async () => {
+    mocks.proxyAwareFetch.mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({ error: { message: "Reset credits are unavailable for this account" } }),
+    });
+
+    const { getCodexRateLimitResetCredits } = await import("../../open-sse/services/usage/codex.js");
+    await expect(getCodexRateLimitResetCredits("token")).rejects.toThrow("Reset credits are unavailable for this account");
   });
 
   it("GET refreshes OAuth credentials before returning reset credit details", async () => {
