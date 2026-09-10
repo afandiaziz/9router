@@ -111,29 +111,9 @@ export function extractTextContent(content, separator = "") {
   return "";
 }
 
-// Sanitize parsed JSON keys for Gemini function response
-// Gemini rejects keys starting with $, #, /, or definitions because they get parsed as protobuf schema references
-export function sanitizeFunctionResponseResult(val) {
-  if (val && typeof val === "object") {
-    if (Array.isArray(val)) {
-      return val.map(sanitizeFunctionResponseResult);
-    }
-    const out = {};
-    for (let [k, v] of Object.entries(val)) {
-      if (k.startsWith("$") || k === "definitions" || k.includes("/") || k.includes("#")) {
-        k = k.replace(/^[$#\/]+/, "_").replace(/[\/#$]/g, "_");
-      }
-      out[k] = sanitizeFunctionResponseResult(v);
-    }
-    return out;
-  }
-  return val;
-}
-
-// Try parse JSON safely and sanitize keys for Gemini compatibility
+// Try parse JSON safely (null fallback on parse error; re-export keeps legacy API)
 export function tryParseJSON(str) {
-  const res = safeParseJSON(str, null);
-  return res ? sanitizeFunctionResponseResult(res) : res;
+  return safeParseJSON(str, null);
 }
 
 // Generate request ID
@@ -157,27 +137,25 @@ export function generateProjectId() {
 
 // Helper: Remove unsupported keywords recursively from object/array
 // Also strips all vendor extension fields (x- prefixed) not supported by Gemini
-function removeUnsupportedKeywords(obj, keywords, isSchema = true) {
+function removeUnsupportedKeywords(obj, keywords) {
   if (!obj || typeof obj !== "object") return;
 
   if (Array.isArray(obj)) {
     for (const item of obj) {
-      removeUnsupportedKeywords(item, keywords, isSchema);
+      removeUnsupportedKeywords(item, keywords);
     }
     return;
   }
 
   for (const key of Object.keys(obj)) {
-    if (isSchema && (keywords.includes(key) || key.startsWith("x-"))) {
+    if (keywords.includes(key) || key.startsWith("x-")) {
       delete obj[key];
       continue;
     }
 
     const value = obj[key];
     if (value && typeof value === "object") {
-      // `properties` contains user-defined names, not schema keywords. Its
-      // values resume the schema tree one level below the name map.
-      removeUnsupportedKeywords(value, keywords, isSchema ? key !== "properties" : true);
+      removeUnsupportedKeywords(value, keywords);
     }
   }
 }
@@ -326,18 +304,10 @@ function flattenTypeArrays(obj) {
 }
 
 // Infer missing type=object when properties exist (Gemini requires explicit type)
-function ensureObjectType(obj, isSchema = true) {
+function ensureObjectType(obj) {
   if (!obj || typeof obj !== "object") return;
-  if (isSchema && obj.properties && !obj.type) obj.type = "object";
-  if (Array.isArray(obj)) {
-    for (const item of obj) ensureObjectType(item, isSchema);
-    return;
-  }
-  for (const [key, value] of Object.entries(obj)) {
-    if (value && typeof value === "object") {
-      ensureObjectType(value, isSchema ? key !== "properties" : true);
-    }
-  }
+  if (obj.properties && !obj.type) obj.type = "object";
+  for (const v of Object.values(obj)) if (v && typeof v === "object") ensureObjectType(v);
 }
 
 // Convert prefixItems (tuple validation) to items — Gemini cannot express tuples,
@@ -461,3 +431,22 @@ export function cleanJSONSchemaForAntigravity(schema) {
 
   return cleaned;
 }
+
+// Merge adjacent same-role messages, strip empty parts, ensure initial user turn
+export function normalizeGeminiContents(contents) {
+  const out = [];
+  for (const c of contents || []) {
+    if (!c?.role || !Array.isArray(c.parts)) continue;
+    const parts = c.parts.filter(p => p && Object.keys(p).length > 0);
+    if (parts.length === 0) continue;
+    const last = out.at(-1);
+    if (last?.role === c.role) last.parts.push(...parts);
+    else out.push({ ...c, parts: [...parts] });
+  }
+  if (out.length > 0 && out[0].role !== "user") {
+    out.unshift({ role: "user", parts: [{ text: "..." }] });
+  }
+  return out;
+}
+
+
