@@ -26,7 +26,6 @@ import {
   getOllamaUsage,
   getVercelAiGatewayUsage,
   getQoderUsage,
-  getCommandCodeUsage,
 } from "./usage/misc.js";
 
 /**
@@ -67,7 +66,6 @@ const USAGE_HANDLERS = {
   commandcode: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
   cmc: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
   "xiaomi-mimo": (c) => getXiaomiMimoUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
-  commandcode: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
 };
 
 export async function getUsageForProvider(connection, proxyOptions = null, options = {}) {
