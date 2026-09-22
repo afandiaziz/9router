@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { getProviderIconSrc, markProviderIconMissing } from "@/shared/utils/providerIcon";
-import { Card, Button, Badge, Input, Modal, CardSkeleton, OAuthModal, KiroOAuthWrapper, CursorAuthModal, XiaomiMimoAuthModal, IFlowCookieModal, GitLabAuthModal, Toggle, Select, EditConnectionModal, NoAuthProxyCard, ConfirmModal, Pagination } from "@/shared/components";
+import { Card, Button, Badge, Input, Modal, CardSkeleton, OAuthModal, KiroOAuthWrapper, CursorAuthModal, XiaomiMimoAuthModal, IFlowCookieModal, GitLabAuthModal, Toggle, Select, EditConnectionModal, NoAuthProxyCard, ConfirmModal } from "@/shared/components";
 import { OAUTH_PROVIDERS, APIKEY_PROVIDERS, FREE_PROVIDERS, FREE_TIER_PROVIDERS, WEB_COOKIE_PROVIDERS, getProviderAlias, isOpenAICompatibleProvider, isAnthropicCompatibleProvider, AI_PROVIDERS } from "@/shared/constants/providers";
 import { getModelsByProviderId, getModelKind } from "@/shared/constants/models";
 import { getThinkingLevels } from "open-sse/providers/thinkingLevels.js";
@@ -18,18 +18,13 @@ import ModelRow from "./ModelRow";
 import PassthroughModelsSection from "./PassthroughModelsSection";
 import CompatibleModelsSection from "./CompatibleModelsSection";
 import ConnectionRow from "./ConnectionRow";
-import { CONNECTIONS_PER_PAGE, CONNECTIONS_MAX_PAGE_SIZE, computeConnectionPagination } from "./connectionsPagination";
 import AddApiKeyModal from "./AddApiKeyModal";
 import EditCompatibleNodeModal from "./EditCompatibleNodeModal";
 import AddCustomModelModal from "./AddCustomModelModal";
-import ImportModelsModal from "./ImportModelsModal";
 import BulkImportCodexModal from "./BulkImportCodexModal";
 import BulkImportGrokCliModal from "./BulkImportGrokCliModal";
 
 const ONE_BY_ONE_DELAY_MS = 1000;
-
-// Qoder upstream ids may carry a "qoder/" prefix that the router does not expect.
-const stripQoderPrefix = (id) => id.replace(/^qoder\//, "");
 
 const AUTO_PING_SETTINGS_KEYS = {
   claude: "claudeAutoPing",
@@ -46,8 +41,6 @@ export default function ProviderDetailPage() {
   const providerId = params.id;
   const { getCaps } = useModelCaps();
   const [connections, setConnections] = useState([]);
-  const [connectionPage, setConnectionPage] = useState(1);
-  const [pageSize, setPageSize] = useState(CONNECTIONS_PER_PAGE);
   const [loading, setLoading] = useState(true);
   const [providerNode, setProviderNode] = useState(null);
   const [proxyPools, setProxyPools] = useState([]);
@@ -90,8 +83,6 @@ export default function ProviderDetailPage() {
   const [oneByOneResults, setOneByOneResults] = useState({});
   const [oneByOneSummary, setOneByOneSummary] = useState(null);
   const stopOneByOneRef = useRef(false);
-  const [showImportModels, setShowImportModels] = useState(false);
-  const [importSupported, setImportSupported] = useState(false);
   const [importingQoderModels, setImportingQoderModels] = useState(false);
   const [importingClineModels, setImportingClineModels] = useState(false);
   const { copied, copy } = useCopyToClipboard();
@@ -164,7 +155,7 @@ export default function ProviderDetailPage() {
   const supportsApiKeyAuth = !!APIKEY_PROVIDERS[providerId] || authModes.includes("apikey");
   const isFreeNoAuth = !!FREE_PROVIDERS[providerId]?.noAuth;
   const staticModels = getModelsByProviderId(providerId);
-  const models = ["cursor", "devin", "zed"].includes(providerId) && liveModels.length > 0
+  const models = (providerId === "cursor" || providerId === "zed") && liveModels.length > 0
     ? liveModels
     : staticModels;
   const providerAlias = getProviderAlias(providerId);
@@ -181,7 +172,7 @@ export default function ProviderDetailPage() {
   const apiKeyConnectionLabel =
     providerId === "xai" ? "xAI API Key"
     : providerId === "kimi" ? "Kimi API Key"
-    : providerId === "qoder" ? "PAT"
+    : (providerId === "qoder" || providerId === "qoder-cn") ? "PAT"
     : "API Key";
   // Resolve suffix "(level)" for a model when a thinking level is picked and the model supports it.
   const resolveThinkingSuffix = (modelId) => {
@@ -213,23 +204,6 @@ export default function ProviderDetailPage() {
   const providerDisplayAlias = isCompatible
     ? (providerNode?.prefix || providerId)
     : providerAlias;
-
-  // Ids already present for this provider (built-in, custom, alias targets) —
-  // shown as disabled rows in the import modal.
-  const importExistingIds = (() => {
-    const set = new Set();
-    for (const m of models) set.add(m.id);
-    for (const m of kiloFreeModels) set.add(m.id);
-    for (const m of customModels) {
-      if (m.providerAlias === providerStorageAlias && (m.kind || m.type || "llm") === "llm") set.add(m.id);
-    }
-    for (const target of Object.values(modelAliases)) {
-      if (typeof target === "string" && target.startsWith(`${providerStorageAlias}/`)) {
-        set.add(target.slice(providerStorageAlias.length + 1));
-      }
-    }
-    return set;
-  })();
 
   const fetchDisabledModels = useCallback(async () => {
     try {
@@ -330,7 +304,7 @@ export default function ProviderDetailPage() {
   const fetchConnections = useCallback(async () => {
     try {
       const [connectionsRes, nodesRes, proxyPoolsRes, settingsRes] = await Promise.all([
-        fetch(`/api/providers?provider=${encodeURIComponent(providerId)}`, { cache: "no-store" }),
+        fetch("/api/providers", { cache: "no-store" }),
         fetch("/api/provider-nodes", { cache: "no-store" }),
         fetch("/api/proxy-pools?isActive=true", { cache: "no-store" }),
         fetch("/api/settings", { cache: "no-store" }),
@@ -340,10 +314,8 @@ export default function ProviderDetailPage() {
       const proxyPoolsData = await proxyPoolsRes.json();
       const settingsData = settingsRes.ok ? await settingsRes.json() : {};
       if (connectionsRes.ok) {
-        // Filter client-side too: the server filter is an optimization, not a
-        // guarantee. An older worker (or a malformed ?provider=) returns the
-        // full list, and this page must never render another provider's rows.
-        setConnections((connectionsData.connections || []).filter((c) => c.provider === providerId));
+        const filtered = (connectionsData.connections || []).filter(c => c.provider === providerId);
+        setConnections(filtered);
       }
       if (proxyPoolsRes.ok) {
         setProxyPools(proxyPoolsData.proxyPools || []);
@@ -497,12 +469,12 @@ export default function ProviderDetailPage() {
     fetchDisabledModels();
   }, [fetchConnections, fetchAliases, fetchCustomModels, fetchDisabledModels]);
 
-  // Live per-connection catalogs (cursor, devin, zed): the static registry
-  // carries no usable list, so resolve from the active connection. Fires only
-  // when the provider id or connection list changes — no polling, no loop.
-  // Cursor/devin paths are statement-identical to before; zed adds error surfacing.
+  // Live per-connection catalogs (cursor, zed): the static registry carries
+  // no usable list, so resolve from the active connection. Fires only when
+  // the provider id or connection list changes — no polling, no loop.
+  // Cursor path is statement-identical to before; zed adds error surfacing.
   useEffect(() => {
-    const isLiveCatalog = ["cursor", "devin", "zed"].includes(providerId);
+    const isLiveCatalog = providerId === "cursor" || providerId === "zed";
     if (!isLiveCatalog) {
       setLiveModels([]);
       return;
@@ -547,21 +519,6 @@ export default function ProviderDetailPage() {
     if (!fetcher) return;
     fetchSuggestedModels(fetcher).then(setSuggestedModels);
   }, [providerId]);
-
-  // Probe whether this provider supports upstream models listing (?check=1,
-  // no upstream call). Drives visibility of the "Import Models" button. For
-  // compatible providers the check requires a Base URL on the connection.
-  const activeConnectionId = connections.find((conn) => conn.isActive !== false)?.id || null;
-  useEffect(() => {
-    setImportSupported(false);
-    if (!activeConnectionId) return;
-    let cancelled = false;
-    fetch(`/api/providers/${activeConnectionId}/models?check=1`)
-      .then((res) => res.json())
-      .then((data) => { if (!cancelled) setImportSupported(data.supported === true); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [activeConnectionId]);
 
   const handleSetAlias = async (modelId, alias, providerAliasOverride = providerAlias) => {
     const fullModel = `${providerAliasOverride}/${modelId}`;
@@ -655,8 +612,9 @@ export default function ProviderDetailPage() {
         const modelId = model.id || model.name;
         if (!modelId) continue;
 
-        // Qoder model ID format may be "qoder/auto" or "auto", need to remove prefix
-        const cleanModelId = modelId.replace(/^qoder\//, "");
+        // Qoder model ID format may be "qoder/auto", "qoder-cn/auto" or "auto",
+        // need to remove the provider prefix before storing.
+        const cleanModelId = modelId.replace(/^(qoder-cn|qoder)\//, "");
         const alreadyExists = customModels.some(
           (entry) => entry.providerAlias === providerStorageAlias && entry.id === cleanModelId && (entry.kind || entry.type || "llm") === "llm"
         ) || Object.values(modelAliases).includes(`${providerStorageAlias}/${cleanModelId}`);
@@ -960,12 +918,22 @@ export default function ProviderDetailPage() {
   };
 
   const selectedConnections = connections.filter((conn) => selectedConnectionIds.includes(conn.id));
+  const allSelected = connections.length > 0 && selectedConnectionIds.length === connections.length;
+
   const toggleSelectConnection = (connectionId) => {
     setSelectedConnectionIds((prev) => (
       prev.includes(connectionId)
         ? prev.filter((id) => id !== connectionId)
         : [...prev, connectionId]
     ));
+  };
+
+  const toggleSelectAllConnections = () => {
+    if (allSelected) {
+      setSelectedConnectionIds([]);
+      return;
+    }
+    setSelectedConnectionIds(connections.map((conn) => conn.id));
   };
 
   const clearSelection = () => {
@@ -1047,34 +1015,10 @@ export default function ProviderDetailPage() {
 
   const isSelected = (connectionId) => selectedConnectionIds.includes(connectionId);
 
-  const { currentPage: connectionPageClamped, items: pagedConnections, start: pagedStart } = computeConnectionPagination(connections, connectionPage, pageSize);
-
-  const handlePageSizeChange = (nextPageSize) => {
-    setPageSize(nextPageSize);
-    setConnectionPage(1);
-  };
-
-  // Select-all operates on the visible page only; selections persist across pages.
-  const pagedConnectionIds = new Set(pagedConnections.map((conn) => conn.id));
-  const allSelected = pagedConnections.length > 0 && pagedConnections.every((conn) => selectedConnectionIds.includes(conn.id));
-
-  const toggleSelectAllConnections = () => {
-    if (allSelected) {
-      setSelectedConnectionIds((prev) => prev.filter((id) => !pagedConnectionIds.has(id)));
-      return;
-    }
-    setSelectedConnectionIds((prev) => {
-      const next = new Set(prev);
-      for (const id of pagedConnectionIds) next.add(id);
-      return [...next];
-    });
-  };
-
   const connectionsList = (
-<div className="flex min-w-0 flex-col divide-y divide-black/[0.03] dark:divide-white/[0.03] max-h-[500px] overflow-y-auto pr-1">
-      {pagedConnections.map((conn, pageIndex) => {
-        const index = pagedStart + pageIndex;
-        return (
+    <div className="flex min-w-0 flex-col divide-y divide-black/[0.03] dark:divide-white/[0.03] max-h-[500px] overflow-y-auto pr-1">
+      {connections
+        .map((conn, index) => (
           <div key={conn.id} className="flex min-w-0 items-stretch">
             <div className="flex shrink-0 items-center pl-1 sm:pl-2">
               <input
@@ -1126,19 +1070,7 @@ export default function ProviderDetailPage() {
               />
             </div>
           </div>
-        );
-      })}
-      {connections.length > CONNECTIONS_PER_PAGE && (
-        <Pagination
-          currentPage={connectionPageClamped}
-          pageSize={pageSize}
-          totalItems={connections.length}
-          onPageChange={setConnectionPage}
-          onPageSizeChange={handlePageSizeChange}
-          allowCustomPageSize
-          maxPageSize={CONNECTIONS_MAX_PAGE_SIZE}
-        />
-      )}
+        ))}
     </div>
   );
 
@@ -1229,8 +1161,6 @@ export default function ProviderDetailPage() {
           onDeleteCustomModel={(modelId) => handleDeleteCustomModel(modelId, "llm", providerStorageAlias)}
           connections={connections}
           isAnthropic={isAnthropicCompatible}
-          onModelsChanged={fetchCustomModels}
-          importSupported={importSupported}
         />
       );
     }
@@ -1316,14 +1246,17 @@ export default function ProviderDetailPage() {
           Add Model
         </button>
 
-        {/* Import models from the provider's /models endpoint — only when supported */}
-        {importSupported && activeConnectionId && (
+        {/* Import Qoder models button — only show for qoder/qoder-cn provider */}
+        {(providerId === "qoder" || providerId === "qoder-cn") && connections.some((conn) => conn.isActive !== false) && (
           <button
-            onClick={() => setShowImportModels(true)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-blue-500/40 px-3 py-2 text-xs text-blue-600 dark:text-blue-400 transition-colors hover:border-blue-500 hover:bg-blue-500/5 sm:w-auto"
+            onClick={handleImportQoderModels}
+            disabled={importingQoderModels}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-blue-500/40 px-3 py-2 text-xs text-blue-600 dark:text-blue-400 transition-colors hover:border-blue-500 hover:bg-blue-500/5 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span className="material-symbols-outlined text-sm">download</span>
-            Import Models
+            <span className="material-symbols-outlined text-sm" style={importingQoderModels ? { animation: "spin 1s linear infinite" } : undefined}>
+              {importingQoderModels ? "progress_activity" : "download"}
+            </span>
+            {importingQoderModels ? translate("Fetching...") : translate("Fetch Qoder Models")}
           </button>
         )}
 
@@ -1593,44 +1526,14 @@ export default function ProviderDetailPage() {
               {connections.length > 0 && (
                 <>
                   {selectedConnectionIds.length > 0 && (
-                    <>
-                      {selectedConnections.some((c) => c.isActive !== false) && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          icon="block"
-                          onClick={() => {
-                            const ids = [...selectedConnectionIds];
-                            ids.forEach((id) => handleUpdateConnectionStatus(id, false));
-                            setSelectedConnectionIds([]);
-                          }}
-                        >
-                          Disable Selected ({selectedConnectionIds.length})
-                        </Button>
-                      )}
-                      {selectedConnections.some((c) => c.isActive === false) && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          icon="check_circle"
-                          onClick={() => {
-                            const ids = [...selectedConnectionIds];
-                            ids.forEach((id) => handleUpdateConnectionStatus(id, true));
-                            setSelectedConnectionIds([]);
-                          }}
-                        >
-                          Enable Selected ({selectedConnectionIds.length})
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        icon="delete"
-                        onClick={handleBulkDelete}
-                      >
-                        Delete Selected ({selectedConnectionIds.length})
-                      </Button>
-                    </>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      icon="delete"
+                      onClick={handleBulkDelete}
+                    >
+                      Delete Selected ({selectedConnectionIds.length})
+                    </Button>
                   )}
                   <Button
                     size="sm"
@@ -2008,16 +1911,6 @@ export default function ProviderDetailPage() {
           onClose={() => setShowAddCustomModel(false)}
         />
       )}
-
-      <ImportModelsModal
-        isOpen={showImportModels}
-        onClose={() => setShowImportModels(false)}
-        connectionId={activeConnectionId}
-        providerStorageAlias={providerStorageAlias}
-        existingIds={importExistingIds}
-        transformId={providerId === "qoder" ? stripQoderPrefix : undefined}
-        onImported={fetchCustomModels}
-      />
 
       {providerId === "codex" && (
         <BulkImportCodexModal

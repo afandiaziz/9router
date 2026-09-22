@@ -108,65 +108,9 @@ const MITM_BYPASS_HOSTS = [
   "api2.cursor.sh",
 ];
 const GOOGLE_DNS_SERVERS = ["8.8.8.8", "8.8.4.4"];
-
-// Connection pool limits — prevent exhaustion under concurrent upstream load
-const MAX_CONNECTIONS_PER_ORIGIN = 32;
-const MAX_FREE_CONNECTIONS_PER_ORIGIN = 16;
-const KEEP_ALIVE_TIMEOUT = 60_000;
-const CONNECTION_TIMEOUT = 30_000;
-const BODY_TIMEOUT = 300_000;
-const PROXY_MAX_CONNECTIONS = 64;
-const PROXY_MAX_FREE_CONNECTIONS = 32;
-
-let sharedDirectAgent = null;
-const bypassAgentByHost = new Map();
-
-async function getDirectAgent() {
-  if (sharedDirectAgent) return sharedDirectAgent;
-  const { Agent } = await import("undici");
-  sharedDirectAgent = new Agent({
-    connections: MAX_CONNECTIONS_PER_ORIGIN,
-    keepAliveMaxTimeout: KEEP_ALIVE_TIMEOUT,
-    keepAliveTimeout: 4000,
-    bodyTimeout: BODY_TIMEOUT,
-    headersTimeout: 60_000,
-    connectTimeout: CONNECTION_TIMEOUT,
-    pipelining: 1,
-    maxCachedSessions: MAX_FREE_CONNECTIONS_PER_ORIGIN,
-  });
-  return sharedDirectAgent;
-}
-
-async function getBypassAgent(hostname, realIP) {
-  const key = `${hostname}:${realIP}`;
-  if (bypassAgentByHost.has(key)) return bypassAgentByHost.get(key);
-
-  if (bypassAgentByHost.size >= 50) {
-    const first = bypassAgentByHost.keys().next().value;
-    const agent = bypassAgentByHost.get(first);
-    try { agent.destroy(); } catch {}
-    bypassAgentByHost.delete(first);
-  }
-
-  const { Agent } = await import("undici");
-  const agent = new Agent({
-    connect: {
-      hostname: realIP,
-      servername: hostname,
-      rejectUnauthorized: true,
-    },
-    connections: MAX_CONNECTIONS_PER_ORIGIN,
-    keepAliveMaxTimeout: KEEP_ALIVE_TIMEOUT,
-    keepAliveTimeout: 4000,
-    bodyTimeout: BODY_TIMEOUT,
-    headersTimeout: 60_000,
-    connectTimeout: CONNECTION_TIMEOUT,
-    pipelining: 1,
-    maxCachedSessions: MAX_FREE_CONNECTIONS_PER_ORIGIN,
-  });
-  bypassAgentByHost.set(key, agent);
-  return agent;
-}
+const HTTPS_PORT = 443;
+const HTTP_SUCCESS_MIN = 200;
+const HTTP_SUCCESS_MAX = 300;
 
 function normalizeString(value) {
   if (value === undefined || value === null) return "";
@@ -205,37 +149,6 @@ function shouldBypassMitmDns(url) {
   } catch { return false; }
 }
 
-/**
- * Loopback targets are never reachable through an outbound proxy: the proxy would
- * resolve `localhost` against ITS own machine. A local provider (ollama-local, a
- * self-hosted TTS/STT, a local relay) therefore fails with a connection error the
- * moment `HTTP_PROXY` is set in the environment — which is the normal state on a
- * corporate Windows box. Node's own `fetch` ignores those variables entirely, so
- * "curl works, node works, 9router does not" is the expected shape of the bug.
- *
- * Bypass is limited to loopback. A LAN address (a remote Ollama on 192.168.x)
- * can legitimately need a proxy, and `NO_PROXY` still covers that case.
- */
-export function isLoopbackTarget(targetUrl) {
-  let hostname;
-  try { hostname = new URL(targetUrl).hostname.toLowerCase(); } catch { return false; }
-
-  // URL keeps IPv6 literals in brackets.
-  const host = hostname.startsWith("[") && hostname.endsWith("]") ? hostname.slice(1, -1) : hostname;
-
-  if (host === "localhost" || host.endsWith(".localhost")) return true;
-  if (host === "::1" || host === "0:0:0:0:0:0:0:1") return true;
-
-  // IPv4-mapped loopback. `new URL()` re-serializes `[::ffff:127.0.0.1]` as
-  // `::ffff:7f00:1`, so the dotted form alone would miss the value we actually see.
-  const hexMapped = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i.exec(host);
-  if (hexMapped) return ((parseInt(hexMapped[1], 16) >> 8) & 0xff) === 127;
-
-  const dottedMapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(host);
-  const ipv4 = dottedMapped ? dottedMapped[1] : host;
-  return /^127(?:\.\d{1,3}){3}$/.test(ipv4);
-}
-
 function shouldBypassByNoProxy(targetUrl, noProxyValue) {
   const noProxy = normalizeString(noProxyValue);
   if (!noProxy) return false;
@@ -255,8 +168,6 @@ function shouldBypassByNoProxy(targetUrl, noProxyValue) {
  * Get proxy URL from environment
  */
 function getEnvProxyUrl(targetUrl) {
-  if (isLoopbackTarget(targetUrl)) return null;
-
   const noProxy = process.env.NO_PROXY || process.env.no_proxy;
   if (shouldBypassByNoProxy(targetUrl, noProxy)) return null;
 
@@ -292,7 +203,6 @@ function normalizeProxyUrl(proxyUrl) {
 function resolveConnectionProxyUrl(targetUrl, proxyOptions) {
   const enabled = proxyOptions?.enabled === true || proxyOptions?.connectionProxyEnabled === true;
   if (!enabled) return null;
-  if (isLoopbackTarget(targetUrl)) return null;
 
   const proxyUrlRaw = normalizeString(proxyOptions?.url ?? proxyOptions?.connectionProxyUrl);
   if (!proxyUrlRaw) return null;
@@ -304,59 +214,81 @@ function resolveConnectionProxyUrl(targetUrl, proxyOptions) {
 }
 
 /**
- * Create proxy dispatcher lazily (undici-compatible) with connection limits
+ * Create proxy dispatcher lazily (undici-compatible)
  */
 async function getDispatcher(proxyUrl) {
   const normalized = normalizeProxyUrl(proxyUrl);
   if (!normalized) return null;
 
   if (!proxyDispatchers.has(normalized)) {
+    // Evict oldest entry if max size reached
     if (proxyDispatchers.size >= MEMORY_CONFIG.proxyDispatchersMaxSize) {
       proxyDispatchers.delete(proxyDispatchers.keys().next().value);
     }
     const { ProxyAgent } = await import("undici");
-    proxyDispatchers.set(normalized, new ProxyAgent({
-      uri: normalized,
-      connections: PROXY_MAX_CONNECTIONS,
-      keepAliveMaxTimeout: KEEP_ALIVE_TIMEOUT,
-      keepAliveTimeout: 4000,
-      bodyTimeout: BODY_TIMEOUT,
-      headersTimeout: 60_000,
-      connectTimeout: CONNECTION_TIMEOUT,
-      pipelining: 1,
-      maxCachedSessions: PROXY_MAX_FREE_CONNECTIONS,
-    }));
+    proxyDispatchers.set(normalized, new ProxyAgent({ uri: normalized }));
   }
 
   return proxyDispatchers.get(normalized);
 }
 
 /**
- * Create pooled HTTPS request that resolves to real IP (bypass DNS spoof).
- * Uses a per-host undici Agent with connection limits to avoid exhaustion.
+ * Create HTTPS request with manual socket connection (bypass DNS)
  */
 async function createBypassRequest(parsedUrl, realIP, options) {
-  const hostname = parsedUrl.hostname;
-  const agent = await getBypassAgent(hostname, realIP);
+  const httpsModule = await import("https");
+  const netModule = await import("net");
+  // CJS modules expose exports via .default in ESM dynamic import context
+  const https = httpsModule.default ?? httpsModule;
+  const net = netModule.default ?? netModule;
 
-  const url = `https://${hostname}${parsedUrl.pathname}${parsedUrl.search}`;
+  return new Promise((resolve, reject) => {
+    const socket = new net.Socket();
 
-  const response = await originalFetch(url, {
-    method: options.method || "POST",
-    headers: { ...options.headers, Host: hostname },
-    body: options.body,
-    dispatcher: agent,
+    socket.connect(HTTPS_PORT, realIP, () => {
+      const reqOptions = {
+        socket,
+        // SNI + cert hostname are validated against the hostname the caller
+        // asked for, not the IP we connected to. This keeps the DNS-bypass
+        // (avoiding /etc/hosts MITM) while still rejecting on-path attackers
+        // that present a different cert. The MITM_BYPASS_HOSTS targets are
+        // all public-CA-issued (Google / GitHub / AWS / Cursor) so default
+        // verification works without any extra trust store.
+        servername: parsedUrl.hostname,
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: options.method || "POST",
+        headers: {
+          ...options.headers,
+          Host: parsedUrl.hostname,
+        },
+      };
+
+      const req = https.request(reqOptions, (res) => {
+        const response = {
+          ok: res.statusCode >= HTTP_SUCCESS_MIN && res.statusCode < HTTP_SUCCESS_MAX,
+          status: res.statusCode,
+          statusText: res.statusMessage,
+          headers: new Map(Object.entries(res.headers)),
+          body: Readable.toWeb(res),
+          text: async () => {
+            const chunks = [];
+            for await (const chunk of res) chunks.push(chunk);
+            return Buffer.concat(chunks).toString();
+          },
+          json: async () => JSON.parse(await response.text()),
+        };
+        resolve(response);
+      });
+
+      req.on("error", reject);
+      if (options.body) {
+        req.write(typeof options.body === "string" ? options.body : JSON.stringify(options.body));
+      }
+      req.end();
+    });
+
+    socket.on("error", reject);
   });
-
-  return {
-    ok: response.ok,
-    status: response.status,
-    statusText: response.statusText,
-    headers: new Map(response.headers),
-    body: response.body,
-    text: async () => await response.text(),
-    json: async () => await response.json(),
-  };
 }
 
 export async function proxyAwareFetch(url, options = {}, proxyOptions = null) {
@@ -407,38 +339,25 @@ export async function proxyAwareFetch(url, options = {}, proxyOptions = null) {
       const dispatcher = await getDispatcher(proxyUrl);
       return await originalFetch(url, { ...options, dispatcher });
     } catch (proxyError) {
+      // If strictProxy is enabled, fail hard instead of falling back to direct
       if (proxyOptions?.strictProxy === true) {
         throw new Error(`[ProxyFetch] Proxy required but failed (strictProxy=true): ${proxyError.message}`);
       }
       console.warn(`[ProxyFetch] Proxy failed, falling back to direct: ${proxyError.message}`);
-      const agent = await getDirectAgent();
-      return originalFetch(url, { ...options, dispatcher: agent });
+      return originalFetch(url, options);
     }
   }
 
-  const agent = await getDirectAgent();
-  return originalFetch(url, { ...options, dispatcher: agent });
+  // got-scraping disabled — use native fetch directly
+  // (Re-enable per-host by wrapping with tryGotScrapingFetch when needed)
+  return originalFetch(url, options);
 }
 
 /**
- * Patched global fetch with env-proxy support, MITM DNS bypass, and connection limits
+ * Patched global fetch with env-proxy support and MITM DNS bypass
  */
 async function patchedFetch(url, options = {}) {
-  const targetUrl = typeof url === "string" ? url : url.toString();
-
-  if (shouldBypassMitmDns(targetUrl)) {
-    try {
-      const parsedUrl = new URL(targetUrl);
-      const cached = DNS_CACHE.get(parsedUrl.hostname);
-      if (cached && Date.now() < cached.expiry) {
-        const agent = await getBypassAgent(parsedUrl.hostname, cached.ip);
-        return originalFetch(url, { ...options, dispatcher: agent });
-      }
-    } catch {}
-  }
-
-  const agent = await getDirectAgent();
-  return originalFetch(url, { ...options, dispatcher: agent });
+  return proxyAwareFetch(url, options, null);
 }
 
 // Idempotency guard — only patch once to avoid wrapping multiple times

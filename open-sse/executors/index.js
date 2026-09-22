@@ -11,6 +11,7 @@ import { CursorExecutor } from "./cursor.js";
 import { VertexExecutor } from "./vertex.js";
 import { OpenCodeExecutor } from "./opencode.js";
 import { OpenCodeGoExecutor } from "./opencode-go.js";
+import { OpenCodeZenExecutor } from "./opencode-zen.js";
 import { GrokWebExecutor } from "./grok-web.js";
 import { GrokCliExecutor } from "./grok-cli.js";
 import { PerplexityWebExecutor } from "./perplexity-web.js";
@@ -25,7 +26,6 @@ import ZedExecutor from "./zed.js";
 import WindsurfExecutor from "./windsurf.js";
 import { DefaultExecutor } from "./default.js";
 import { DevinCliExecutor } from "./devin-cli.js";
-import { DevinExecutor } from "./devin.js";
 
 const executors = {
   antigravity: new AntigravityExecutor(),
@@ -34,6 +34,7 @@ const executors = {
   github: new GithubExecutor(),
   iflow: new IFlowExecutor(),
   qoder: new QoderExecutor(),
+  "qoder-cn": new QoderExecutor("qoder-cn"),
   kiro: new KiroExecutor(),
   kimchi: new KimchiExecutor(),
   codex: new CodexExecutor(),
@@ -43,6 +44,7 @@ const executors = {
   "vertex-partner": new VertexExecutor("vertex-partner"),
   opencode: new OpenCodeExecutor(),
   "opencode-go": new OpenCodeGoExecutor(),
+  "opencode-zen": new OpenCodeZenExecutor(),
   "grok-web": new GrokWebExecutor(),
   "grok-cli": new GrokCliExecutor(),
   gcli: new GrokCliExecutor(), // Alias
@@ -59,7 +61,6 @@ const executors = {
   zed: new ZedExecutor(),
   windsurf: new WindsurfExecutor(),
   "devin-cli": new DevinCliExecutor(),
-  devin: new DevinExecutor(),
 };
 
 const defaultCache = new Map();
@@ -89,6 +90,7 @@ export { VertexExecutor } from "./vertex.js";
 export { DefaultExecutor } from "./default.js";
 export { OpenCodeExecutor } from "./opencode.js";
 export { OpenCodeGoExecutor } from "./opencode-go.js";
+export { OpenCodeZenExecutor } from "./opencode-zen.js";
 export { GrokWebExecutor } from "./grok-web.js";
 export { GrokCliExecutor } from "./grok-cli.js";
 export { PerplexityWebExecutor } from "./perplexity-web.js";
@@ -102,4 +104,3 @@ export { default as TraeExecutor } from "./trae.js";
 export { default as ZedExecutor } from "./zed.js";
 export { default as WindsurfExecutor } from "./windsurf.js";
 export { DevinCliExecutor } from "./devin-cli.js";
-export { DevinExecutor } from "./devin.js";

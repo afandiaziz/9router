@@ -35,6 +35,9 @@ export const GEMINI_CONFIG = { ...GOOGLE_OAUTH_CLIENT, ...PROVIDER_OAUTH["gemini
 // of attempting to silently rotate.
 export const QODER_CONFIG = { ...PROVIDER_OAUTH["qoder"] };
 
+// Qoder CN (qoder.com.cn) — same device flow as intl Qoder, CN endpoints.
+export const QODER_CN_CONFIG = { ...PROVIDER_OAUTH["qoder-cn"] };
+
 // iFlow OAuth Configuration (Authorization Code)
 export const IFLOW_CONFIG = { ...PROVIDER_OAUTH["iflow"] };
 
@@ -123,13 +126,6 @@ export const KIMCHI_CONFIG = { ...PROVIDER_OAUTH["kimchi"] };
 // Grok CLI / Grok Build OAuth Configuration (Device Code Flow)
 // Endpoint: cli-chat-proxy.grok.com — same client_id as xai, different flow + scopes
 export const GROK_CLI_CONFIG = { ...PROVIDER_OAUTH["grok-cli"] };
-
-// Devin Cloud OAuth (PKCE + CLI callback exchange)
-export const DEVIN_CONFIG = {
-  ...PROVIDER_OAUTH.devin,
-  apiEndpoint: PROVIDER_OAUTH.devin.apiUrl,
-  webEndpoint: "https://app.devin.ai",
-};
 
 // Trae (ByteDance marscode) OAuth — authorization_code flow with local callback.
 //   1) POST GetLoginGuidance {loginTraceID} → {Result.LoginHost}
@@ -226,6 +222,7 @@ export const PROVIDERS = {
   CODEX: "codex",
   GEMINI: "gemini-cli",
   QODER: "qoder",
+  QODER_CN: "qoder-cn",
   IFLOW: "iflow",
   ANTIGRAVITY: "antigravity",
   OPENAI: "openai",
