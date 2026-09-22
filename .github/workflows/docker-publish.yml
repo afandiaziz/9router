@@ -92,14 +92,15 @@ jobs:
 
           const rootVersion = require("./package.json").version;
           const cliVersion = require("./cli/package.json").version;
+          const packageVersion = version.split("-")[0];
 
-          if (rootVersion !== version) {
-            console.error(`package.json version ${rootVersion} does not match tag ${tag}`);
+          if (rootVersion !== packageVersion) {
+            console.error(`package.json version ${rootVersion} does not match tag base version ${packageVersion}`);
             process.exit(1);
           }
 
-          if (cliVersion !== version) {
-            console.error(`cli/package.json version ${cliVersion} does not match tag ${tag}`);
+          if (cliVersion !== packageVersion) {
+            console.error(`cli/package.json version ${cliVersion} does not match tag base version ${packageVersion}`);
             process.exit(1);
           }
 
