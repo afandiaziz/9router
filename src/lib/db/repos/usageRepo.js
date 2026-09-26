@@ -1,44 +1,19 @@
 import { EventEmitter } from "events";
-import { createHash } from "crypto";
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 import { getMeta, setMeta } from "../helpers/metaStore.js";
-import { getChartDayBucketCount, getUsagePeriodDays } from "@/lib/usagePeriods.js";
-
-function isValidTimeZone(timeZone) {
-  if (!timeZone || typeof timeZone !== "string") return false;
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone });
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 function maskApiKey(key) {
   if (!key || typeof key !== "string") return null;
-  if (key.length <= 8) return key.charAt(0) + "***";
-  return key.slice(0, 8) + "***";
-}
-
-function apiKeyIdentity(key) {
-  if (!key || typeof key !== "string") return "local-no-key";
-  return createHash("sha256").update(key).digest("hex").slice(0, 16);
+  if (key.length <= 12) return key.charAt(0) + "***";
+  // Keep the tail: keys sharing a machine-id prefix (team keys) must not collide.
+  return key.slice(0, 8) + "***" + key.slice(-4);
 }
 
 const PENDING_TIMEOUT_MS = 60 * 1000;
 const RING_CAP = 50;
-
 const CONN_CACHE_TTL_MS = 30 * 1000;
-const PERIOD_MS = {
-  "24h": 86400000,
-  "7d": 604800000,
-  "30d": 2592000000,
-  "60d": 5184000000,
-  "90d": 7776000000,
-  "180d": 15552000000,
-  "365d": 31536000000,
-};
+const PERIOD_MS = { "24h": 86400000, "7d": 604800000, "30d": 2592000000, "60d": 5184000000 };
 
 // In-memory state shared across Next.js modules
 if (!global._pendingRequests) global._pendingRequests = { byModel: {}, byAccount: {} };
@@ -264,24 +239,6 @@ export async function getActiveRequests() {
   return { activeRequests, recentRequests, errorProvider };
 }
 
-/**
- * Increment quota usage for quota keys (sk-danton-*) on successful request.
- * Returns true if increment happened, false otherwise.
- */
-export async function applyQuotaIncrement(apiKey, tokens, timestamp = new Date().toISOString(), deps = null) {
-  if (!apiKey || !String(apiKey).startsWith("sk-danton-")) return false;
-  const { getQuotaKeyByFullKey, incrementQuotaUsage } = deps || {
-    getQuotaKeyByFullKey: (await import("./quotaKeysRepo.js")).getQuotaKeyByFullKey,
-    incrementQuotaUsage: (await import("./quotaKeysRepo.js")).incrementQuotaUsage,
-  };
-  const key = await getQuotaKeyByFullKey(apiKey);
-  if (!key) return false;
-  const { getWindowKey } = await import("./quotaWindow.js");
-  const { periodKey, windowStart, resetAt } = getWindowKey(key.limitPeriod);
-  await incrementQuotaUsage(key.id, key.limitPeriod, periodKey, windowStart, resetAt, Number(tokens) || 0);
-  return true;
-}
-
 export async function saveRequestUsage(entry) {
   try {
     const db = await getAdapter();
@@ -298,37 +255,27 @@ export async function saveRequestUsage(entry) {
     // All 3 writes (history insert, daily upsert, lifetime counter) in ONE transaction.
     // better-sqlite3 is sync → no JS yield mid-transaction → no race in same process.
     db.transaction(() => {
-      // Back-fill only: a row written earlier without its endpoint is the same
-      // request arriving again with one, so complete it instead of inserting.
-      //
-      // The match is deliberately limited to endpoint-less rows. `timestamp` is
-      // an ISO string with millisecond resolution, so matching on the value
-      // tuple alone also swallows genuinely distinct requests that share a
-      // millisecond — same provider, model, connection and token counts. That is
-      // ordinary under parallel load and cost real usage rows plus their
-      // totalRequestsLifetime increments.
-      const backfill = entry.endpoint
-        ? db.get(
-          `SELECT id FROM usageHistory
-           WHERE timestamp = ?
-             AND COALESCE(provider, '') = COALESCE(?, '')
-             AND COALESCE(model, '') = COALESCE(?, '')
-             AND COALESCE(connectionId, '') = COALESCE(?, '')
-             AND COALESCE(apiKey, '') = COALESCE(?, '')
-             AND promptTokens = ?
-             AND completionTokens = ?
-             AND COALESCE(endpoint, '') = ''
-           ORDER BY id DESC LIMIT 1`,
-          [
-            entry.timestamp, entry.provider || null, entry.model || null,
-            entry.connectionId || null, entry.apiKey || null,
-            promptTokens, completionTokens,
-          ]
-        )
-        : null;
+      const existing = db.get(
+        `SELECT id, endpoint FROM usageHistory
+         WHERE timestamp = ?
+           AND COALESCE(provider, '') = COALESCE(?, '')
+           AND COALESCE(model, '') = COALESCE(?, '')
+           AND COALESCE(connectionId, '') = COALESCE(?, '')
+           AND COALESCE(apiKey, '') = COALESCE(?, '')
+           AND promptTokens = ?
+           AND completionTokens = ?
+         ORDER BY id DESC LIMIT 1`,
+        [
+          entry.timestamp, entry.provider || null, entry.model || null,
+          entry.connectionId || null, entry.apiKey || null,
+          promptTokens, completionTokens,
+        ]
+      );
 
-      if (backfill) {
-        db.run(`UPDATE usageHistory SET endpoint = ? WHERE id = ?`, [entry.endpoint, backfill.id]);
+      if (existing) {
+        if (!existing.endpoint && entry.endpoint) {
+          db.run(`UPDATE usageHistory SET endpoint = ? WHERE id = ?`, [entry.endpoint, existing.id]);
+        }
         return;
       }
 
@@ -361,38 +308,10 @@ export async function saveRequestUsage(entry) {
     if (inserted) {
       pushToRing(entry);
       scheduleStatsEvent("update", 250);
-      await applyQuotaIncrement(entry.apiKey, promptTokens + completionTokens, entry.timestamp);
     }
   } catch (e) {
     console.error("Failed to save usage stats:", e);
   }
-}
-
-export async function getDailyConnectionUsage(connectionId, now = new Date()) {
-  if (!connectionId) {
-    return { requests: 0, tokens: 0, resetAt: null };
-  }
-
-  const current = now instanceof Date ? now : new Date(now);
-  const startOfDay = new Date(current);
-  startOfDay.setHours(0, 0, 0, 0);
-  const nextDay = new Date(startOfDay);
-  nextDay.setDate(nextDay.getDate() + 1);
-
-  const db = await getAdapter();
-  const row = db.get(
-    `SELECT COUNT(*) AS requests,
-            COALESCE(SUM(promptTokens + completionTokens), 0) AS tokens
-       FROM usageHistory
-      WHERE timestamp >= ? AND timestamp < ? AND connectionId = ?`,
-    [startOfDay.toISOString(), nextDay.toISOString(), String(connectionId)],
-  );
-
-  return {
-    requests: Number(row?.requests) || 0,
-    tokens: Number(row?.tokens) || 0,
-    resetAt: nextDay.toISOString(),
-  };
 }
 
 export async function getUsageHistory(filter = {}) {
@@ -528,7 +447,8 @@ export async function getUsageStats(period = "all") {
   const useDailySummary = period !== "24h" && period !== "today";
 
   if (useDailySummary) {
-    const maxDays = getUsagePeriodDays(period);
+    const periodDays = { "7d": 7, "30d": 30, "60d": 60 };
+    const maxDays = periodDays[period] || null;
     const dayRows = loadDaysInRange(db, maxDays);
 
     for (const dr of dayRows) {
@@ -581,7 +501,7 @@ export async function getUsageStats(period = "all") {
         if (dateKey > (stats.byAccount[accountKey].lastUsed || "")) stats.byAccount[accountKey].lastUsed = dateKey;
       }
 
-      for (const ak of Object.values(day.byApiKey || {})) {
+      for (const [akKey, ak] of Object.entries(day.byApiKey || {})) {
         const rawModel = ak.rawModel || "";
         const provider = ak.provider || "";
         const providerDisplayName = providerNodeNameMap[provider] || provider;
@@ -589,8 +509,7 @@ export async function getUsageStats(period = "all") {
         const keyInfo = apiKeyVal ? apiKeyMap[apiKeyVal] : null;
         const keyName = keyInfo?.name || (apiKeyVal ? apiKeyVal.slice(0, 8) + "..." : "Local (No API Key)");
         const apiKeyMasked = maskApiKey(apiKeyVal);
-        const apiKeyKey = apiKeyIdentity(apiKeyVal);
-        const akKey = `${apiKeyKey}|${rawModel}|${provider || "unknown"}`;
+        const apiKeyKey = apiKeyMasked || "local-no-key";
         if (!stats.byApiKey[akKey]) {
           stats.byApiKey[akKey] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0, rawModel, provider: providerDisplayName, apiKeyMasked, keyName, apiKeyKey, lastUsed: dateKey };
         }
@@ -644,8 +563,8 @@ export async function getUsageStats(period = "all") {
       }
 
       const apiKeyKey = (e.apiKey && typeof e.apiKey === "string")
-        ? `${apiKeyIdentity(e.apiKey)}|${e.model}|${e.provider || "unknown"}`
-        : `local-no-key|${e.model}|${e.provider || "unknown"}`;
+        ? `${e.apiKey}|${e.model}|${e.provider || "unknown"}`
+        : "local-no-key";
       if (stats.byApiKey[apiKeyKey] && new Date(ts) > new Date(stats.byApiKey[apiKeyKey].lastUsed)) stats.byApiKey[apiKeyKey].lastUsed = ts;
 
       const endpoint = e.endpoint || "Unknown";
@@ -716,20 +635,20 @@ export async function getUsageStats(period = "all") {
         const keyInfo = apiKeyMap[r.apiKey];
         const keyName = keyInfo?.name || r.apiKey.slice(0, 8) + "...";
         const apiKeyMasked = maskApiKey(r.apiKey);
-        const apiKeyKey = apiKeyIdentity(r.apiKey);
-        const akKey = `${apiKeyKey}|${r.model}|${r.provider || "unknown"}`;
+        // Key by the FULL api key (same as the daily rollup + lastUsed overlay)
+        // — masking here collided all keys sharing a prefix into one bucket.
+        const akKey = `${r.apiKey}|${r.model}|${r.provider || "unknown"}`;
         if (!stats.byApiKey[akKey]) {
-          stats.byApiKey[akKey] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0, rawModel: r.model, provider: providerDisplayName, apiKeyMasked, keyName, apiKeyKey, lastUsed: r.timestamp };
+          stats.byApiKey[akKey] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0, rawModel: r.model, provider: providerDisplayName, apiKeyMasked, keyName, apiKeyKey: apiKeyMasked, lastUsed: r.timestamp };
         }
         const ake = stats.byApiKey[akKey];
         ake.requests++; ake.promptTokens += promptTokens; ake.completionTokens += completionTokens; ake.cachedTokens += cachedTokens; ake.cost += entryCost;
         if (new Date(r.timestamp) > new Date(ake.lastUsed)) ake.lastUsed = r.timestamp;
       } else {
-        const akKey = `local-no-key|${r.model}|${r.provider || "unknown"}`;
-        if (!stats.byApiKey[akKey]) {
-          stats.byApiKey[akKey] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0, rawModel: r.model, provider: providerDisplayName, apiKeyMasked: null, keyName: "Local (No API Key)", apiKeyKey: "local-no-key", lastUsed: r.timestamp };
+        if (!stats.byApiKey["local-no-key"]) {
+          stats.byApiKey["local-no-key"] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0, rawModel: r.model, provider: providerDisplayName, apiKeyMasked: null, keyName: "Local (No API Key)", apiKeyKey: "local-no-key", lastUsed: r.timestamp };
         }
-        const ake = stats.byApiKey[akKey];
+        const ake = stats.byApiKey["local-no-key"];
         ake.requests++; ake.promptTokens += promptTokens; ake.completionTokens += completionTokens; ake.cachedTokens += cachedTokens; ake.cost += entryCost;
         if (new Date(r.timestamp) > new Date(ake.lastUsed)) ake.lastUsed = r.timestamp;
       }
@@ -749,41 +668,16 @@ export async function getUsageStats(period = "all") {
   return stats;
 }
 
-// Offset (ms) to add to a UTC instant to get the wall-clock time in `timeZone`.
-function tzOffsetMs(date, timeZone) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hourCycle: "h23",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  })
-    .formatToParts(date)
-    .reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
-  const asUTC = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
-  return asUTC - date.getTime();
-}
-
-// Start of "today" (00:00) expressed as a UTC epoch ms, for the given IANA timeZone.
-function startOfDayInTz(now, timeZone) {
-  const offset = tzOffsetMs(now, timeZone);
-  const localNow = new Date(now.getTime() + offset);
-  localNow.setUTCHours(0, 0, 0, 0);
-  return localNow.getTime() - offset;
-}
-
-export async function getChartData(period = "7d", timeZone) {
+export async function getChartData(period = "7d") {
   const db = await getAdapter();
   const now = Date.now();
-  const tz = isValidTimeZone(timeZone) ? timeZone : undefined;
 
   if (period === "today") {
     const bucketCount = 24;
     const bucketMs = 3600000;
-    const startTime = tz ? startOfDayInTz(new Date(now), tz) : (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); })();
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const startTime = startOfDay.getTime();
     const endTime = startTime + bucketCount * bucketMs;
     const labelFn = (ts) => new Date(ts).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
     const buckets = Array.from({ length: bucketCount }, (_, i) => ({ label: labelFn(startTime + i * bucketMs), tokens: 0, cost: 0, requests: 0 }));
@@ -808,7 +702,7 @@ export async function getChartData(period = "7d", timeZone) {
   if (period === "24h") {
     const bucketCount = 24;
     const bucketMs = 3600000;
-    const labelFn = (ts) => new Date(ts).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, ...(tz ? { timeZone: tz } : {}) });
+    const labelFn = (ts) => new Date(ts).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
     const startTime = now - bucketCount * bucketMs;
     const buckets = Array.from({ length: bucketCount }, (_, i) => ({ label: labelFn(startTime + i * bucketMs), tokens: 0, cost: 0, requests: 0 }));
 

@@ -2,14 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import PropTypes from "prop-types";
-import Modal from "./Modal";
-import Button from "./Button";
-import Input from "./Input";
+import { Modal, Button, Input } from "@/shared/components";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 
-// Providers using a local callback proxy.
+// Providers using the dynamic-port local callback proxy.
 // Browser OAuth: popup → auto callback → auto exchange → poll-status.
-const PROXY_OAUTH_PROVIDERS = new Set(["trae", "windsurf", "zed", "devin"]);
+const PROXY_OAUTH_PROVIDERS = new Set(["trae", "windsurf", "zed"]);
 
 // Providers offering a paste-token fallback (import-token flow).
 // UX warns if the IDE (which issues the token) is not installed.
@@ -207,9 +205,9 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
     }
   }, []);
 
-  // Trae/Windsurf/Zed/Devin proxy OAuth flow: dynamic-port local callback → auto exchange.
+  // Trae/Windsurf/Zed proxy OAuth flow: dynamic-port local callback → auto exchange.
   const startProxyFlow = useCallback(async (providerId) => {
-    // 1. Start the provider callback server and obtain its registered callback URL.
+    // 1. Start the local callback server (returns a dynamic port + callback URL).
     const startRes = await fetch(`/api/oauth/${providerId}/start-proxy`);
     const startData = await startRes.json();
     if (!startRes.ok || !startData.success || !startData.callbackUrl) {
@@ -239,9 +237,8 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
     }
     // 3. Register the session so the proxy can match the incoming callback.
     //    Zed also passes code_verifier (encodes the RSA private key for decrypt)
-    //    + systemId; Devin passes redirectUri — all sent via POST body so
-    //    secrets never land in URL/query logs.
-    const regBody = { state: authData.state, redirectUri: authData.redirectUri };
+    //    + systemId; sent via POST body so secrets never land in URL/query logs.
+    const regBody = { state: authData.state };
     if (authData.codeVerifier) regBody.codeVerifier = authData.codeVerifier;
     if (authData.systemId) regBody.systemId = authData.systemId;
     const regRes = await fetch(`/api/oauth/${providerId}/register-session`, {
@@ -669,7 +666,7 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
 
       const input = callbackUrl.trim();
 
-      // Proxy OAuth fallback (popup blocked or remote deployment): paste the full callback URL
+      // Trae/Windsurf/Zed proxy flow fallback (popup blocked): paste the full callback URL
       if (PROXY_OAUTH_PROVIDERS.has(provider) && input) {
         const res = await fetch(`/api/oauth/${provider}/exchange`, {
           method: "POST",
@@ -751,25 +748,23 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
     ? "http://127.0.0.1:56121/callback?code=... or copied code"
     : isKimchiProvider
       ? `${placeholderUrl.replace("code=...", "token=...")} or copied token`
-      : PROXY_OAUTH_PROVIDERS.has(provider)
-      ? "Paste the complete callback URL copied from the browser address bar..."
       : placeholderUrl;
 
   return (
     <Modal isOpen={isOpen} title={modalTitle} onClose={handleClose} size="lg">
       <div className="flex flex-col gap-4">
-        {/* Trae/Windsurf: browser OAuth (proxy) + paste-token fallback */}
+        {/* Proxy OAuth (trae/windsurf/zed): browser flow; paste-token only when configured */}
         {PROXY_OAUTH_PROVIDERS.has(provider) && (step === "waiting" || step === "input" || step === "error") && (
           <>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => { setAuthMode("browser"); setError(null); setStep("waiting"); startOAuthFlow(); }}
-                className={`flex-1 rounded-lg border px-3 py-2 text-sm transition-colors ${authMode === "browser" ? "border-primary bg-primary/10 text-primary" : "border-border text-text-muted hover:text-primary"}`}
-              >
-                🌐 Sign in with browser
-              </button>
-              {PASTE_TOKEN_PROVIDERS[provider] && (
+            {PASTE_TOKEN_PROVIDERS[provider] && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode("browser"); setError(null); setStep("waiting"); startOAuthFlow(); }}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm transition-colors ${authMode === "browser" ? "border-primary bg-primary/10 text-primary" : "border-border text-text-muted hover:text-primary"}`}
+                >
+                  🌐 Sign in with browser
+                </button>
                 <button
                   type="button"
                   onClick={() => { setAuthMode("paste-token"); setError(null); setStep("input"); }}
@@ -777,8 +772,8 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
                 >
                   🔑 Paste token
                 </button>
-              )}
-            </div>
+              </div>
+            )}
 
             {authMode === "browser" && (
               <>
@@ -788,15 +783,15 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
                     <span className="text-sm">Waiting for browser authorization…</span>
                   </div>
                 )}
-                {(step === "input" || (step === "waiting" && provider === "devin")) && (
+                {step === "input" && (
                   <div className="space-y-3">
                     <p className="text-sm text-text-muted">
-                      After authorizing in the browser, paste the full callback URL here if automatic callback is unavailable:
+                      Popup was blocked. After authorizing in the browser, paste the full callback URL here:
                     </p>
                     <Input
                       value={callbackUrl}
                       onChange={(e) => setCallbackUrl(e.target.value)}
-                      placeholder={manualPlaceholder}
+                      placeholder="http://127.0.0.1:.../callback?..."
                       className="font-mono text-xs"
                     />
                     <div className="flex gap-2">

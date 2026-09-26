@@ -19,12 +19,6 @@ export async function deleteModelAlias(alias) {
   await aliasKv.remove(alias);
 }
 
-// Delete all aliases associated with a given provider node (values start with "{providerId}/")
-export async function deleteModelAliasesByProvider(providerId) {
-  const db = await getAdapter();
-  db.run(`DELETE FROM kv WHERE scope = 'modelAliases' AND value LIKE ?`, [`${providerId}/%`]);
-}
-
 // customModels: key=`${providerAlias}|${id}|${type}`, value=full model object
 function customKey(providerAlias, id, type) {
   return `${providerAlias}|${id}|${type}`;
@@ -36,8 +30,8 @@ export async function getCustomModels() {
 }
 
 // Atomic upsert inside transaction to prevent duplicate races.
-// Re-adding an existing model updates caps/name without resetting omitted fields.
-export async function addCustomModel({ providerAlias, id, type = "llm", name, caps, maxInputTokens, maxOutputTokens }) {
+// Re-adding an existing model updates caps/name/transport without resetting omitted fields.
+export async function addCustomModel({ providerAlias, id, type = "llm", name, caps, transport }) {
   const k = customKey(providerAlias, id, type);
   const db = await getAdapter();
   let added = false;
@@ -45,25 +39,11 @@ export async function addCustomModel({ providerAlias, id, type = "llm", name, ca
     const row = db.get(`SELECT value FROM kv WHERE scope = 'customModels' AND key = ?`, [k]);
     if (row) {
       const prev = parseJson(row.value) || {};
-      const next = {
-        ...prev,
-        ...(name ? { name } : {}),
-        ...(caps ? { caps } : {}),
-        ...(maxInputTokens ? { maxInputTokens } : {}),
-        ...(maxOutputTokens ? { maxOutputTokens } : {}),
-      };
+      const next = { ...prev, ...(name ? { name } : {}), ...(caps ? { caps } : {}), ...(transport ? { transport } : {}) };
       db.run(`UPDATE kv SET value = ? WHERE scope = 'customModels' AND key = ?`, [stringifyJson(next), k]);
       return;
     }
-    const value = stringifyJson({
-      providerAlias,
-      id,
-      type,
-      name: name || id,
-      ...(caps ? { caps } : {}),
-      ...(maxInputTokens ? { maxInputTokens } : {}),
-      ...(maxOutputTokens ? { maxOutputTokens } : {}),
-    });
+    const value = stringifyJson({ providerAlias, id, type, name: name || id, ...(caps ? { caps } : {}), ...(transport ? { transport } : {}) });
     db.run(`INSERT INTO kv(scope, key, value) VALUES('customModels', ?, ?)`, [k, value]);
     added = true;
   });
@@ -72,27 +52,6 @@ export async function addCustomModel({ providerAlias, id, type = "llm", name, ca
 
 export async function deleteCustomModel({ providerAlias, id, type = "llm" }) {
   await customKv.remove(customKey(providerAlias, id, type));
-}
-
-// Bulk insert in one transaction; existing keys are skipped (same rule as addCustomModel)
-export async function addCustomModelsBulk({ providerAlias, type = "llm", ids = [] }) {
-  const db = await getAdapter();
-  let added = 0;
-  let skipped = 0;
-  db.transaction(() => {
-    for (const id of ids) {
-      const k = customKey(providerAlias, id, type);
-      const row = db.get(`SELECT 1 FROM kv WHERE scope = 'customModels' AND key = ?`, [k]);
-      if (row) {
-        skipped += 1;
-        continue;
-      }
-      const value = stringifyJson({ providerAlias, id, type, name: id });
-      db.run(`INSERT INTO kv(scope, key, value) VALUES('customModels', ?, ?)`, [k, value]);
-      added += 1;
-    }
-  });
-  return { added, skipped };
 }
 
 // mitmAlias: key=toolName, value=mappings object

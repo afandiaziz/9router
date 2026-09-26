@@ -181,7 +181,7 @@ describe("fetchViaDerivedEndpoint", () => {
 
   it("uses Command Code's public provider models endpoint", () => {
     expect(deriveModelsEndpoint(getRegistryEntry("commandcode"))).toEqual({
-      url: "https://api.commandcode.ai/provider/v1/models",
+      url: "https://api.commandcode.ai/alpha/generate",
       style: "openai",
     });
     const staticModels = getStaticProviderModels("commandcode");
