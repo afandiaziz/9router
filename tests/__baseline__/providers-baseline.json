@@ -121,7 +121,9 @@
     "usage": {
       "oauthUrl": "https://api.anthropic.com/api/oauth/usage",
       "orgUrl": "https://api.anthropic.com/v1/organizations/{org_id}/usage",
-      "settingsUrl": "https://api.anthropic.com/v1/settings"
+      "settingsUrl": "https://api.anthropic.com/v1/settings",
+      "profileUrl": "https://api.anthropic.com/api/oauth/profile",
+      "resetUrl": "https://api.anthropic.com/api/organizations/{org_id}/reset_rate_limits"
     },
     "clientId": "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
     "tokenUrl": "https://api.anthropic.com/v1/oauth/token"
@@ -199,10 +201,11 @@
     "baseUrl": "https://chatgpt.com/backend-api/codex/responses",
     "format": "openai-responses",
     "forceStream": true,
-    "cliVersion": "0.154.0",
+    "cliVersion": "0.155.0",
     "headers": {
       "originator": "codex_cli_rs",
-      "User-Agent": "codex_cli_rs/0.154.0"
+      "User-Agent": "codex_cli_rs/0.155.0",
+      "version": "0.155.0"
     },
     "usage": {
       "url": "https://chatgpt.com/backend-api/wham/usage",
@@ -218,8 +221,13 @@
     "format": "openai"
   },
   "commandcode": {
-    "baseUrl": "https://api.commandcode.ai/provider/v1/chat/completions",
-    "format": "openai"
+    "baseUrl": "https://api.commandcode.ai/alpha/generate",
+    "format": "commandcode",
+    "forceStream": true,
+    "headers": {
+      "x-command-code-version": "0.25.7",
+      "x-cli-environment": "cli"
+    }
   },
   "cursor": {
     "baseUrl": "https://api2.cursor.sh",
@@ -1068,12 +1076,6 @@
     "validateUrl": "https://api.morphllm.com/v1/models",
     "format": "openai"
   },
-  "devin": {
-    "baseUrl": "https://server.codeium.com/exa.api_server_pb.ApiServerService/GetChatMessage",
-    "format": "openai",
-    "forceStream": true,
-    "tokenUrl": "https://api.devin.ai/auth/cli/token"
-  },
   "poolside": {
     "baseUrl": "https://inference.poolside.ai/v1/chat/completions",
     "validateUrl": "https://inference.poolside.ai/v1/models",
@@ -1090,6 +1092,14 @@
     "headers": {},
     "quirks": {
       "preserveCacheControl": true
+    },
+    "format": "openai"
+  },
+  "tokenharbor": {
+    "baseUrl": "https://tokenharbor.ai/v1/chat/completions",
+    "validateUrl": "https://tokenharbor.ai/v1/models",
+    "retry": {
+      "429": 2
     },
     "format": "openai"
   },
@@ -1111,14 +1121,6 @@
   "bai": {
     "baseUrl": "https://api.b.ai/v1/chat/completions",
     "validateUrl": "https://api.b.ai/v1/models",
-    "format": "openai"
-  },
-  "tokenharbor": {
-    "baseUrl": "https://tokenharbor.ai/v1/chat/completions",
-    "validateUrl": "https://tokenharbor.ai/v1/models",
-    "retry": {
-      "429": 2
-    },
     "format": "openai"
   }
 }

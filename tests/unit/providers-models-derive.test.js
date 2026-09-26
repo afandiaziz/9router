@@ -180,12 +180,11 @@ describe("fetchViaDerivedEndpoint", () => {
   });
 
   it("uses Command Code's public provider models endpoint", () => {
-    expect(deriveModelsEndpoint(getRegistryEntry("commandcode"))).toEqual({
-      url: "https://api.commandcode.ai/alpha/generate",
-      style: "openai",
-    });
+    // Command Code uses the NDJSON /alpha/generate endpoint — no derivable
+    // OpenAI/Anthropic models listing from its baseUrl.
+    expect(deriveModelsEndpoint(getRegistryEntry("commandcode"))).toBeNull();
     const staticModels = getStaticProviderModels("commandcode");
     expect(staticModels[0]?.id).toBe("deepseek/deepseek-v4-pro");
-    expect(staticModels.length).toBe(11);
+    expect(staticModels.length).toBe(22);
   });
 });
